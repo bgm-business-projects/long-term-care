@@ -1,0 +1,423 @@
+{
+  "nav": {
+    "home": "首頁",
+    "collapse": "收合側邊欄",
+    "profile": "會員資訊",
+    "plans": "方案比較",
+    "admin": "管理"
+  },
+  "app": {
+    "slogan": "你的平台，你做主。",
+    "subtitle": "現代化 SaaS 起步框架"
+  },
+  "auth": {
+    "login": "登入",
+    "register": "註冊",
+    "logout": "登出",
+    "email": "電子郵件",
+    "password": "密碼",
+    "name": "名稱",
+    "namePlaceholder": "你的名稱",
+    "emailPlaceholder": "you{'@'}example.com",
+    "passwordPlaceholder": "••••••••",
+    "confirmPassword": "確認密碼",
+    "confirmPasswordPlaceholder": "再次輸入密碼",
+    "signInWithGoogle": "使用 Google 登入",
+    "signUpWithGoogle": "使用 Google 註冊",
+    "lineWarning": "LINE 內建瀏覽器不支援 Google 登入，請使用外部瀏覽器開啟。",
+    "registerStep1Hint": "註冊前請先閱讀並同意以下條款。",
+    "registerNext": "下一步：選擇註冊方式",
+    "noAccount": "還沒有帳號？",
+    "hasAccount": "已經有帳號了？",
+    "signUpLink": "註冊",
+    "signInLink": "登入",
+    "passwordRule": {
+      "minLength": "至少 8 個字元",
+      "maxLength": "不超過 128 個字元",
+      "match": "密碼一致"
+    },
+    "consent": {
+      "agree": "我已閱讀並同意以下聲明：",
+      "terms": "同意服務條款並遵守平台使用規範",
+      "privacy": "同意隱私權政策，允許蒐集及使用個人資料",
+      "data": "您的資料儲存於雲端，可跨裝置存取",
+      "age": "我確認已年滿 16 歲",
+      "email": "同意接收帳號相關通知信件",
+      "disclaimerTitle": "免責聲明：",
+      "noGuarantee": "本服務以「現況」提供，不附帶任何明示或暗示之擔保",
+      "dataLoss": "因系統故障、維護或不可抗力導致之資料遺失，本平台不負賠償責任",
+      "thirdParty": "因第三方服務（如 Google 登入、郵件寄送）造成之問題，本平台不承擔責任",
+      "changeTerms": "本平台保留隨時修改服務條款或功能之權利，繼續使用即視為同意變更",
+      "noLiability": "平台不保證資料準確性或分析結果",
+      "accountTermination": "本平台保留對違反服務條款之帳號進行停權或刪除之權利"
+    },
+    "error": {
+      "invalidCredentials": "電子郵件或密碼錯誤",
+      "emailExists": "此電子郵件已註冊",
+      "passwordTooShort": "密碼至少需要 8 個字元",
+      "invalidEmail": "請輸入有效的電子郵件地址",
+      "consentRequired": "請先同意相關條款才能註冊",
+      "generic": "發生錯誤，請再試一次"
+    },
+    "rememberMe": "記住帳號",
+    "forgotPasswordLink": "忘記密碼？",
+    "forgotPassword": {
+      "title": "忘記密碼",
+      "description": "輸入您的電子郵件，我們將寄送重設密碼連結給您。",
+      "submit": "發送重設連結",
+      "sent": "請檢查您的信箱！我們已寄送密碼重設連結。",
+      "backToLogin": "返回登入"
+    },
+    "resetPassword": {
+      "title": "重設密碼",
+      "newPassword": "新密碼",
+      "submit": "重設密碼",
+      "success": "密碼重設成功！",
+      "invalidToken": "此重設連結無效或已過期。",
+      "requestAgain": "重新申請連結"
+    },
+    "verifyEmail": {
+      "title": "驗證電子郵件",
+      "verifying": "正在驗證您的電子郵件...",
+      "success": "電子郵件驗證成功！",
+      "invalidToken": "此驗證連結無效或已過期。",
+      "backToLogin": "返回登入"
+    }
+  },
+  "consent": {
+    "title": "服務條款",
+    "subtitle": "繼續使用前，請先閱讀並同意以下條款。",
+    "checkbox": "我已閱讀並同意以上所有條款",
+    "accept": "同意並繼續",
+    "pleaseAgree": "請先勾選同意條款後再繼續"
+  },
+  "cache": {
+    "dataUpdated": "資料已更新"
+  },
+  "common": {
+    "back": "返回",
+    "next": "下一步",
+    "cancel": "取消",
+    "delete": "刪除",
+    "save": "儲存",
+    "confirm": "確認",
+    "edit": "編輯",
+    "search": "搜尋",
+    "error": "發生錯誤"
+  },
+  "photo": {
+    "swipeHint": "左右滑動瀏覽照片",
+    "uploadError": "照片上傳失敗"
+  },
+  "photoCrop": {
+    "title": "裁剪照片",
+    "confirm": "確認",
+    "skip": "跳過（自動裁剪）",
+    "progress": "第 {current}/{total} 張"
+  },
+  "home": {
+    "welcome": "MYAPP"
+  },
+  "profile": {
+    "title": "會員資訊",
+    "personalInfo": "個人資訊",
+    "changePassword": "變更密碼",
+    "name": "顯示名稱",
+    "email": "電子郵件",
+    "save": "儲存",
+    "updatePassword": "更新密碼",
+    "currentPassword": "目前密碼",
+    "newPassword": "新密碼",
+    "confirmNewPassword": "確認新密碼",
+    "toast": {
+      "nameUpdated": "名稱已更新",
+      "passwordChanged": "密碼已變更"
+    },
+    "error": {
+      "wrongPassword": "目前密碼不正確",
+      "nameTooShort": "名稱不能為空"
+    },
+    "linkedAccounts": {
+      "title": "連結帳號",
+      "emailPassword": "電子郵件與密碼",
+      "google": "Google",
+      "linked": "已連結",
+      "linkGoogle": "連結 Google 帳號",
+      "unlinkGoogle": "解除連結",
+      "unlinkConfirm": "確定要解除連結 Google 帳號嗎？",
+      "cannotUnlink": "至少需保留一種登入方式",
+      "toast": {
+        "linked": "Google 帳號已成功連結",
+        "unlinked": "已解除 Google 帳號連結"
+      }
+    }
+  },
+  "plans": {
+    "title": "訂閱方案",
+    "subtitle": "選擇最適合您的方案",
+    "redeemTitle": "有兌換碼嗎？",
+    "redeemSubtitle": "輸入兌換碼升級您的方案"
+  },
+  "subscription": {
+    "title": "訂閱方案",
+    "tier": {
+      "free": "Free 免費版",
+      "pro": "Pro 進階版",
+      "premium": "Premium 專業版",
+      "partner": "Partner 合作夥伴"
+    },
+    "expires": "到期日",
+    "permanent": "永久",
+    "expired": "已過期",
+    "expiresOn": "{date} 到期",
+    "totalSamples": "總杯數",
+    "usage": "{used}/{max} 杯",
+    "usageUnlimited": "{used} 杯（無上限）",
+    "csvExport": {
+      "available": "可匯出 CSV",
+      "proOnly": "CSV 匯出 — 限 Pro 以上"
+    },
+    "redeem": "兌換碼",
+    "redeemPlaceholder": "MYAPP-XXXX-XXXX",
+    "redeemButton": "兌換",
+    "toast": {
+      "redeemed": "兌換成功",
+      "upgraded": "已升級至 {tier}！",
+      "downgraded": "方案已變更為 {tier}",
+      "extended": "訂閱已延長",
+      "alreadyPermanent": "已是永久方案，無需變更"
+    },
+    "error": {
+      "invalidCode": "無效的兌換碼",
+      "alreadyUsed": "此兌換碼已被使用",
+      "codeDisabled": "此兌換碼已停用"
+    },
+    "preview": {
+      "title": "兌換碼資訊",
+      "tier": "方案等級",
+      "duration": "使用期限",
+      "durationValue": "{n} 天",
+      "permanent": "永久",
+      "statusUsed": "此兌換碼已被使用",
+      "statusDisabled": "此兌換碼已停用",
+      "statusInvalid": "無效的兌換碼",
+      "confirm": "確認兌換"
+    },
+    "downgrade": {
+      "title": "確認降級",
+      "message": "目前方案為 {current}，此兌換碼將變更為 {new}，確定套用？",
+      "confirm": "確認降級",
+      "cancel": "取消"
+    },
+    "limit": {
+      "sampleLimitReached": "您已達到目前方案的上限，請升級以繼續使用。",
+      "sampleLimitReachedShort": "杯數已達上限",
+      "csvPremium": "CSV 匯出限 Pro 以上會員使用。",
+      "upgradeLink": "升級"
+    },
+    "tierChange": {
+      "upgradeTitle": "方案已升級！",
+      "downgradeTitle": "方案已變更",
+      "description": "您的訂閱方案已更新。",
+      "oldPlan": "原方案",
+      "newPlan": "目前方案",
+      "sampleLimit": "{n} 杯",
+      "unlimited": "不限杯數",
+      "viewPlans": "查看方案",
+      "ok": "我知道了"
+    }
+  },
+  "adminUsers": {
+    "search": "搜尋名稱或信箱...",
+    "filter": {
+      "all": "全部",
+      "developer": "開發者",
+      "admin": "管理員",
+      "user": "使用者",
+      "allTiers": "全部方案",
+      "allUsers": "全部使用者",
+      "guestConvert": "訪客轉換",
+      "directRegister": "直接註冊"
+    },
+    "empty": "找不到使用者",
+    "badge": {
+      "banned": "已停用",
+      "verified": "已驗證",
+      "guestConvert": "訪客轉換"
+    },
+    "info": {
+      "registered": "註冊 {date}",
+      "lastLogin": "最後登入 {date}"
+    },
+    "actions": {
+      "viewDetail": "查看詳情",
+      "changeRole": "變更角色",
+      "setAdmin": "設為管理員",
+      "setUser": "設為一般使用者",
+      "changeSubscription": "修改訂閱",
+      "ban": "停用帳號",
+      "unban": "啟用帳號",
+      "resetPassword": "發送密碼重設信",
+      "delete": "刪除使用者",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "toast": {
+      "roleChanged": "使用者角色已更新",
+      "subscriptionChanged": "訂閱已更新",
+      "banned": "帳號已停用",
+      "unbanned": "帳號已啟用",
+      "passwordReset": "密碼重設信已發送",
+      "deleted": "使用者已刪除"
+    },
+    "detail": {
+      "title": "使用者詳情",
+      "role": "角色",
+      "tier": "方案",
+      "verified": "已驗證",
+      "banned": "已停用",
+      "registered": "註冊時間",
+      "subscriptionExpires": "訂閱到期",
+      "convertedFromGuest": "訪客轉換"
+    },
+    "subscription": {
+      "title": "修改訂閱方案",
+      "tier": "方案",
+      "expiresAt": "到期日"
+    },
+    "delete": {
+      "title": "刪除使用者",
+      "warning": "此操作將永久刪除該用戶及其所有資料，無法復原。",
+      "confirmLabel": "輸入 DELETE 確認",
+      "confirmPlaceholder": "DELETE"
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "歡迎使用 MyApp！",
+      "subtitle": "探索最適合您的方案",
+      "upgradeNote": "升級至 Pro 或 Premium 需要兌換碼。",
+      "upgradeToast": "請在下一步輸入兌換碼即可升級！",
+      "freeNote": "沒有兌換碼？沒關係，您可以直接使用免費版！"
+    },
+    "tier": {
+      "free": {
+        "name": "免費版",
+        "totalSamples": "最多 100 杯",
+        "csv": "不支援 CSV 匯出"
+      },
+      "pro": {
+        "name": "Pro",
+        "totalSamples": "最多 3,000 杯",
+        "csv": "支援 CSV 匯出"
+      },
+      "premium": {
+        "name": "Premium",
+        "totalSamples": "不限杯數",
+        "csv": "支援 CSV 匯出"
+      },
+      "partner": {
+        "name": "合作夥伴",
+        "totalSamples": "不限杯數",
+        "csv": "支援 CSV 匯出",
+        "earlyAccess": "搶先體驗最新功能"
+      },
+      "currentPlan": "您目前的方案"
+    },
+    "next": "下一步",
+    "redeem": {
+      "title": "您有兌換碼嗎？",
+      "subtitle": "輸入兌換碼即可升級為 Pro 或 Premium",
+      "currentTierHint": "您目前使用的是「{tier}」方案",
+      "placeholder": "MYAPP-XXXX-XXXX",
+      "button": "兌換",
+      "successTitle": "兌換成功！",
+      "successExpires": "有效期限至 {date}",
+      "successPermanent": "永久授權 — 無到期日",
+      "startNow": "立即開始"
+    },
+    "back": "上一步",
+    "skip": "跳過",
+    "done": "開始使用"
+  },
+  "admin": {
+    "title": "管理",
+    "nav": {
+      "users": "使用者",
+      "codes": "兌換碼"
+    },
+    "codes": "兌換碼",
+    "createCode": "新增兌換碼",
+    "batchCreate": "批量產生",
+    "table": {
+      "code": "兌換碼",
+      "tier": "等級",
+      "duration": "期限",
+      "status": "狀態",
+      "usedBy": "使用者",
+      "usedAt": "使用時間",
+      "createdAt": "建立時間"
+    },
+    "form": {
+      "tier": "等級",
+      "durationDays": "天數",
+      "count": "數量",
+      "durationPermanent": "永久"
+    },
+    "toast": {
+      "created": "兌換碼已建立",
+      "batchCreated": "已建立 {n} 組兌換碼",
+      "disabled": "兌換碼已停用",
+      "enabled": "兌換碼已啟用",
+      "copied": "已複製兌換碼",
+      "deleted": "兌換碼已刪除"
+    },
+    "filter": {
+      "all": "全部",
+      "used": "已使用",
+      "unused": "未使用",
+      "disabled": "已停用"
+    },
+    "status": {
+      "active": "有效",
+      "used": "已使用",
+      "disabled": "已停用"
+    },
+    "actions": {
+      "disable": "停用",
+      "enable": "啟用",
+      "copy": "複製",
+      "delete": "刪除"
+    },
+    "pagination": {
+      "showing": "顯示 {from}-{to}，共 {total} 筆"
+    },
+    "confirmDelete": "確定要刪除此兌換碼嗎？此操作無法復原。",
+    "error": {
+      "codeNotFound": "兌換碼不存在",
+      "codeAlreadyUsed": "此兌換碼已被使用，無法刪除"
+    },
+    "empty": "尚無兌換碼",
+    "days": "{n} 天",
+    "permanent": "永久"
+  },
+  "seo": {
+    "defaultDescription": "你的 SaaS 平台。",
+    "home": {
+      "title": "首頁",
+      "description": "歡迎來到您的控制台。"
+    },
+    "plans": {
+      "title": "訂閱方案 — MYAPP",
+      "description": "選擇最適合您的方案。"
+    },
+    "login": {
+      "title": "登入 — MYAPP",
+      "description": "登入以存取您的帳號。"
+    },
+    "profile": {
+      "title": "會員資訊 — MYAPP",
+      "description": "管理您的 MYAPP 帳號設定、個人資訊及連結帳號。"
+    }
+  }
+}

@@ -1,0 +1,423 @@
+{
+  "nav": {
+    "home": "Home",
+    "collapse": "Collapse Sidebar",
+    "profile": "Profile",
+    "plans": "Plans",
+    "admin": "Admin"
+  },
+  "app": {
+    "slogan": "Your Platform, Your Way.",
+    "subtitle": "A modern SaaS starter"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Sign Up",
+    "logout": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "emailPlaceholder": "you{'@'}example.com",
+    "passwordPlaceholder": "••••••••",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Re-enter password",
+    "signInWithGoogle": "Continue with Google",
+    "signUpWithGoogle": "Sign up with Google",
+    "lineWarning": "LINE's built-in browser does not support Google Sign-In. Please open in an external browser.",
+    "registerStep1Hint": "Please read and agree to the terms before registering.",
+    "registerNext": "Next: Choose Registration Method",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "signUpLink": "Sign up",
+    "signInLink": "Sign in",
+    "passwordRule": {
+      "minLength": "At least 8 characters",
+      "maxLength": "No more than 128 characters",
+      "match": "Passwords match"
+    },
+    "consent": {
+      "agree": "I have read and agree to the following:",
+      "terms": "Agree to the Terms of Service and comply with the platform rules",
+      "privacy": "Agree to the Privacy Policy and the collection and use of personal data",
+      "data": "Your data is stored in the cloud and may be accessed across devices",
+      "age": "I confirm that I am at least 16 years of age",
+      "email": "Agree to receive account-related notifications via email",
+      "disclaimerTitle": "Disclaimers:",
+      "noGuarantee": "This service is provided \"as is\" without any express or implied warranties",
+      "dataLoss": "We are not responsible for any data loss due to system failure, maintenance, or force majeure",
+      "thirdParty": "We are not liable for any issues arising from third-party services (e.g. Google sign-in, email delivery)",
+      "changeTerms": "We reserve the right to modify the terms of service or features at any time; continued use constitutes acceptance",
+      "noLiability": "The platform provides no guarantee of data accuracy or analysis results",
+      "accountTermination": "We reserve the right to suspend or terminate accounts that violate the terms of service"
+    },
+    "error": {
+      "invalidCredentials": "Invalid email or password",
+      "emailExists": "Email already registered",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "invalidEmail": "Please enter a valid email address",
+      "consentRequired": "You must agree to the terms before registering",
+      "generic": "Something went wrong, please try again"
+    },
+    "rememberMe": "Remember me",
+    "forgotPasswordLink": "Forgot password?",
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "description": "Enter your email and we'll send you a link to reset your password.",
+      "submit": "Send Reset Link",
+      "sent": "Check your email! We've sent you a password reset link.",
+      "backToLogin": "Back to Sign In"
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "newPassword": "New Password",
+      "submit": "Reset Password",
+      "success": "Your password has been reset successfully!",
+      "invalidToken": "This reset link is invalid or has expired.",
+      "requestAgain": "Request a new link"
+    },
+    "verifyEmail": {
+      "title": "Verify Email",
+      "verifying": "Verifying your email...",
+      "success": "Your email has been verified successfully!",
+      "invalidToken": "This verification link is invalid or has expired.",
+      "backToLogin": "Back to Sign In"
+    }
+  },
+  "consent": {
+    "title": "Terms of Service",
+    "subtitle": "Please review and agree to our terms before continuing.",
+    "checkbox": "I have read and agree to all the terms above",
+    "accept": "Agree and Continue",
+    "pleaseAgree": "Please check the consent box above before continuing"
+  },
+  "cache": {
+    "dataUpdated": "Data updated"
+  },
+  "common": {
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "search": "Search",
+    "error": "An error occurred"
+  },
+  "photo": {
+    "swipeHint": "Swipe to browse photos",
+    "uploadError": "Photo upload failed"
+  },
+  "photoCrop": {
+    "title": "Crop Photo",
+    "confirm": "Confirm",
+    "skip": "Skip (Auto Crop)",
+    "progress": "Photo {current} of {total}"
+  },
+  "home": {
+    "welcome": "MYAPP"
+  },
+  "profile": {
+    "title": "Profile",
+    "personalInfo": "Personal Information",
+    "changePassword": "Change Password",
+    "name": "Display Name",
+    "email": "Email",
+    "save": "Save",
+    "updatePassword": "Update Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "toast": {
+      "nameUpdated": "Name updated",
+      "passwordChanged": "Password changed"
+    },
+    "error": {
+      "wrongPassword": "Current password is incorrect",
+      "nameTooShort": "Name cannot be empty"
+    },
+    "linkedAccounts": {
+      "title": "Linked Accounts",
+      "emailPassword": "Email & Password",
+      "google": "Google",
+      "linked": "Linked",
+      "linkGoogle": "Link Google Account",
+      "unlinkGoogle": "Unlink",
+      "unlinkConfirm": "Are you sure you want to unlink your Google account?",
+      "cannotUnlink": "You need at least one login method",
+      "toast": {
+        "linked": "Google account linked successfully",
+        "unlinked": "Google account unlinked"
+      }
+    }
+  },
+  "plans": {
+    "title": "Subscription Plans",
+    "subtitle": "Choose the plan that fits your needs",
+    "redeemTitle": "Have a redemption code?",
+    "redeemSubtitle": "Enter your code to upgrade your plan"
+  },
+  "subscription": {
+    "title": "Subscription",
+    "tier": {
+      "free": "Free",
+      "pro": "Pro",
+      "premium": "Premium",
+      "partner": "Partner"
+    },
+    "expires": "Expires",
+    "permanent": "Permanent",
+    "expired": "Expired",
+    "expiresOn": "Expires on {date}",
+    "totalSamples": "Total Cups",
+    "usage": "{used}/{max} cups",
+    "usageUnlimited": "{used} cups (unlimited)",
+    "csvExport": {
+      "available": "CSV export available",
+      "proOnly": "CSV export — Pro and above"
+    },
+    "redeem": "Redeem Code",
+    "redeemPlaceholder": "MYAPP-XXXX-XXXX",
+    "redeemButton": "Redeem",
+    "toast": {
+      "redeemed": "Code redeemed successfully",
+      "upgraded": "Upgraded to {tier}!",
+      "downgraded": "Subscription changed to {tier}",
+      "extended": "Subscription extended",
+      "alreadyPermanent": "Already permanent — no change"
+    },
+    "error": {
+      "invalidCode": "Invalid redemption code",
+      "alreadyUsed": "This code has already been used",
+      "codeDisabled": "This code has been disabled"
+    },
+    "preview": {
+      "title": "Redemption Code Details",
+      "tier": "Plan",
+      "duration": "Duration",
+      "durationValue": "{n} days",
+      "permanent": "Permanent",
+      "statusUsed": "This code has already been redeemed",
+      "statusDisabled": "This code has been disabled",
+      "statusInvalid": "Invalid code",
+      "confirm": "Confirm Redeem"
+    },
+    "downgrade": {
+      "title": "Confirm Downgrade",
+      "message": "You are currently on {current}. This code will change your plan to {new}. Proceed?",
+      "confirm": "Confirm Downgrade",
+      "cancel": "Cancel"
+    },
+    "limit": {
+      "sampleLimitReached": "You have reached the limit for your current plan. Please upgrade to continue.",
+      "sampleLimitReachedShort": "Cup limit reached",
+      "csvPremium": "CSV export is available for Pro and Premium members.",
+      "upgradeLink": "Upgrade"
+    },
+    "tierChange": {
+      "upgradeTitle": "Plan Upgraded!",
+      "downgradeTitle": "Plan Changed",
+      "description": "Your subscription plan has been updated.",
+      "oldPlan": "Previous",
+      "newPlan": "Current",
+      "sampleLimit": "{n} cups",
+      "unlimited": "Unlimited",
+      "viewPlans": "View Plans",
+      "ok": "Got it"
+    }
+  },
+  "adminUsers": {
+    "search": "Search by name or email...",
+    "filter": {
+      "all": "All",
+      "developer": "Developer",
+      "admin": "Admin",
+      "user": "User",
+      "allTiers": "All Tiers",
+      "allUsers": "All Users",
+      "guestConvert": "Guest Convert",
+      "directRegister": "Direct Register"
+    },
+    "empty": "No users found",
+    "badge": {
+      "banned": "Banned",
+      "verified": "Verified",
+      "guestConvert": "Guest Convert"
+    },
+    "info": {
+      "registered": "Registered {date}",
+      "lastLogin": "Last login {date}"
+    },
+    "actions": {
+      "viewDetail": "View Details",
+      "changeRole": "Change Role",
+      "setAdmin": "Set as Admin",
+      "setUser": "Set as User",
+      "changeSubscription": "Change Subscription",
+      "ban": "Ban User",
+      "unban": "Unban User",
+      "resetPassword": "Send Password Reset",
+      "delete": "Delete User",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "toast": {
+      "roleChanged": "User role updated",
+      "subscriptionChanged": "Subscription updated",
+      "banned": "User banned",
+      "unbanned": "User unbanned",
+      "passwordReset": "Password reset email sent",
+      "deleted": "User deleted"
+    },
+    "detail": {
+      "title": "User Details",
+      "role": "Role",
+      "tier": "Tier",
+      "verified": "Verified",
+      "banned": "Banned",
+      "registered": "Registered",
+      "subscriptionExpires": "Subscription Expires",
+      "convertedFromGuest": "Converted from Guest"
+    },
+    "subscription": {
+      "title": "Change Subscription",
+      "tier": "Tier",
+      "expiresAt": "Expires At"
+    },
+    "delete": {
+      "title": "Delete User",
+      "warning": "This will permanently delete the user and all their data. This action cannot be undone.",
+      "confirmLabel": "Type DELETE to confirm",
+      "confirmPlaceholder": "DELETE"
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to MyApp!",
+      "subtitle": "Discover the perfect plan for your journey",
+      "upgradeNote": "Upgrading to Pro or Premium requires a redemption code.",
+      "upgradeToast": "Enter a redemption code in the next step to upgrade!",
+      "freeNote": "No code? No worries — you can start with the Free plan right away!"
+    },
+    "tier": {
+      "free": {
+        "name": "Free",
+        "totalSamples": "Up to 100 cups",
+        "csv": "No CSV export"
+      },
+      "pro": {
+        "name": "Pro",
+        "totalSamples": "Up to 3,000 cups",
+        "csv": "CSV export included"
+      },
+      "premium": {
+        "name": "Premium",
+        "totalSamples": "Unlimited cups",
+        "csv": "CSV export included"
+      },
+      "partner": {
+        "name": "Partner",
+        "totalSamples": "Unlimited cups",
+        "csv": "CSV export included",
+        "earlyAccess": "Early access to new features"
+      },
+      "currentPlan": "Your current plan"
+    },
+    "next": "Next",
+    "redeem": {
+      "title": "Do you have a redemption code?",
+      "subtitle": "Enter your code to unlock Pro or Premium features",
+      "currentTierHint": "You are currently on the \"{tier}\" plan",
+      "placeholder": "MYAPP-XXXX-XXXX",
+      "button": "Redeem",
+      "successTitle": "Redemption Successful!",
+      "successExpires": "Valid until {date}",
+      "successPermanent": "Permanent access — no expiry",
+      "startNow": "Start Now"
+    },
+    "back": "Back",
+    "skip": "Skip",
+    "done": "Get Started"
+  },
+  "admin": {
+    "title": "Admin",
+    "nav": {
+      "users": "Users",
+      "codes": "Codes"
+    },
+    "codes": "Codes",
+    "createCode": "Create Code",
+    "batchCreate": "Batch Create",
+    "table": {
+      "code": "Code",
+      "tier": "Tier",
+      "duration": "Duration",
+      "status": "Status",
+      "usedBy": "Used By",
+      "usedAt": "Used At",
+      "createdAt": "Created At"
+    },
+    "form": {
+      "tier": "Tier",
+      "durationDays": "Duration (days)",
+      "count": "Count",
+      "durationPermanent": "Permanent"
+    },
+    "toast": {
+      "created": "Code created",
+      "batchCreated": "{n} codes created",
+      "disabled": "Code disabled",
+      "enabled": "Code enabled",
+      "copied": "Code copied to clipboard",
+      "deleted": "Code deleted"
+    },
+    "filter": {
+      "all": "All",
+      "used": "Used",
+      "unused": "Unused",
+      "disabled": "Disabled"
+    },
+    "status": {
+      "active": "Active",
+      "used": "Used",
+      "disabled": "Disabled"
+    },
+    "actions": {
+      "disable": "Disable",
+      "enable": "Enable",
+      "copy": "Copy",
+      "delete": "Delete"
+    },
+    "pagination": {
+      "showing": "Showing {from}-{to} of {total}"
+    },
+    "confirmDelete": "Are you sure you want to delete this code? This action cannot be undone.",
+    "error": {
+      "codeNotFound": "Code not found",
+      "codeAlreadyUsed": "This code has been used and cannot be deleted"
+    },
+    "empty": "No redemption codes found",
+    "days": "{n} days",
+    "permanent": "Permanent"
+  },
+  "seo": {
+    "defaultDescription": "Your SaaS platform.",
+    "home": {
+      "title": "Home",
+      "description": "Welcome to your dashboard."
+    },
+    "plans": {
+      "title": "Subscription Plans — MYAPP",
+      "description": "Choose the plan that fits your needs."
+    },
+    "login": {
+      "title": "Sign In — MYAPP",
+      "description": "Sign in to access your account."
+    },
+    "profile": {
+      "title": "Profile — MYAPP",
+      "description": "Manage your MYAPP account settings, personal information, and linked accounts."
+    }
+  }
+}

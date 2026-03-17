@@ -1,0 +1,14 @@
+User-Agent: *
+Allow: /
+Allow: /plans
+Allow: /login
+
+Disallow: /admin
+Disallow: /admin/
+Disallow: /sessions
+Disallow: /profile
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /api/
+

@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+@theme static {
+  --color-coffee-50:  #faf6f3;
+  --color-coffee-100: #f0e8e0;
+  --color-coffee-200: #e0cfc1;
+  --color-coffee-300: #ccb09b;
+  --color-coffee-400: #b58e73;
+  --color-coffee-500: #a07558;
+  --color-coffee-600: #8b6147;
+  --color-coffee-700: #74503c;
+  --color-coffee-800: #5e4234;
+  --color-coffee-900: #4a3228;
+  --color-coffee-950: #2d1e17;
+}
+
+/* Step transition animation */
+.step-enter-active,
+.step-leave-active {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.step-enter-from {
+  opacity: 0;
+  transform: translateX(16px);
+}
+
+.step-leave-to {
+  opacity: 0;
+  transform: translateX(-16px);
+}
