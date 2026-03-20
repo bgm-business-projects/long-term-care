@@ -1,20 +1,36 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
-    <div class="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
+    <div class="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-gray-900">今日任務</h1>
           <p class="text-base text-gray-500 mt-0.5">{{ dateLabel }}</p>
         </div>
-        <UButton
-          icon="i-lucide-history"
-          color="neutral"
-          variant="ghost"
-          size="lg"
-          to="/driver/history"
-          aria-label="歷史記錄"
-        />
+        <div class="flex items-center gap-2">
+          <UButton
+            icon="i-lucide-history"
+            color="neutral"
+            variant="ghost"
+            size="lg"
+            to="/driver/history"
+            aria-label="歷史記錄"
+          />
+          <UDropdownMenu
+            :items="[
+              [{ label: driverName, disabled: true, icon: 'i-lucide-user-circle' }],
+              [{ label: '登出', icon: 'i-lucide-log-out', color: 'error' as const, onSelect: handleSignOut }],
+            ]"
+          >
+            <UButton
+              icon="i-lucide-user-circle"
+              color="neutral"
+              variant="ghost"
+              size="lg"
+              aria-label="帳號"
+            />
+          </UDropdownMenu>
+        </div>
       </div>
     </div>
 
@@ -73,6 +89,13 @@
 definePageMeta({ layout: false })
 
 const { api } = useApi()
+const { user, signOut } = useAuth()
+const driverName = computed(() => (user.value as any)?.name || (user.value as any)?.email || '司機')
+
+async function handleSignOut() {
+  await signOut()
+  navigateTo('/driver/login')
+}
 
 const today = new Date()
 const dateLabel = today.toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'long' })

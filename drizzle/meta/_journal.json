@@ -8,6 +8,27 @@
       "when": 1773730961917,
       "tag": "0000_left_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773736664770,
+      "tag": "0001_flat_stingray",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773739600119,
+      "tag": "0002_condemned_liz_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773812723530,
+      "tag": "0003_white_brother_voodoo",
+      "breakpoints": true
     }
   ]
 }

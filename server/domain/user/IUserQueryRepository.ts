@@ -4,6 +4,7 @@ import type { UserEntity } from './UserEntity'
 export interface UserListFilter {
   search?: string
   role?: string
+  organizationId?: string
   tier?: string
   convertedFromGuest?: boolean
 }

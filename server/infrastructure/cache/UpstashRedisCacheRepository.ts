@@ -1,4 +1,4 @@
-import type { Redis } from '@upstash/redis'
+import type Redis from 'ioredis'
 import type { ICacheRepository } from '../../domain/cache/interfaces/ICacheRepository'
 
 export class UpstashRedisCacheRepository implements ICacheRepository {
@@ -6,7 +6,9 @@ export class UpstashRedisCacheRepository implements ICacheRepository {
 
   async get<T>(key: string): Promise<T | null> {
     try {
-      return await this.redis.get<T>(key)
+      const val = await this.redis.get(key)
+      if (val === null) return null
+      return JSON.parse(val) as T
     } catch {
       return null
     }
@@ -14,7 +16,7 @@ export class UpstashRedisCacheRepository implements ICacheRepository {
 
   async set(key: string, value: unknown, ttlSeconds: number): Promise<void> {
     try {
-      await this.redis.set(key, value, { ex: ttlSeconds })
+      await this.redis.set(key, JSON.stringify(value), 'EX', ttlSeconds)
     } catch {}
   }
 
@@ -26,10 +28,7 @@ export class UpstashRedisCacheRepository implements ICacheRepository {
 
   async sadd(key: string, ...members: string[]): Promise<void> {
     try {
-      if (members.length) {
-        const [first, ...rest] = members
-        await this.redis.sadd(key, first, ...rest)
-      }
+      if (members.length) await this.redis.sadd(key, ...members)
     } catch {}
   }
 

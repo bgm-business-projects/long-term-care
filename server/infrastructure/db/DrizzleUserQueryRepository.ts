@@ -22,6 +22,9 @@ export class DrizzleUserQueryRepository implements IUserQueryRepository {
     if (filter.role) {
       conditions.push(eq(user.role, filter.role))
     }
+    if (filter.organizationId) {
+      conditions.push(eq(user.organizationId, filter.organizationId))
+    }
     if (filter.tier) {
       conditions.push(eq(user.subscriptionTier, filter.tier))
     }

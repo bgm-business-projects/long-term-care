@@ -1,16 +1,18 @@
-const publicPaths = ['/login', '/forgot-password', '/reset-password', '/verify-email']
+const publicPaths = ['/', '/forgot-password', '/reset-password', '/verify-email', '/admin/login', '/agency/login', '/driver/login']
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const { user, loading, fetchSession } = useAuth()
 
-  // ── Public auth pages — render immediately, no session fetch needed ──
+  // ── Public auth pages ──
   if (publicPaths.includes(to.path)) {
-    // Already known logged in → redirect away (preserve redirect param)
     if (user.value) {
+      const role = (user.value as any).role ?? ''
+      if (to.path === '/admin/login') return navigateTo('/admin')
+      if (to.path === '/agency/login') return navigateTo('/agency')
+      if (to.path === '/driver/login') return navigateTo('/driver')
       const { getSafeRedirectUrl } = useRedirectService()
       return navigateTo(getSafeRedirectUrl(to.query.redirect))
     }
-    // Don't await fetchSession — let the page render instantly
     return
   }
 
@@ -18,30 +20,33 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await fetchSession()
   }
 
-  // ── Normal Auth Flow ──
-
-  // Not logged in — redirect to login
+  // Not logged in — redirect to context-appropriate login
   if (!user.value) {
-    return navigateTo('/login')
+    if (to.path.startsWith('/admin')) return navigateTo('/admin/login')
+    if (to.path.startsWith('/agency')) return navigateTo('/agency/login')
+    if (to.path.startsWith('/driver')) return navigateTo('/driver/login')
+    return navigateTo('/')
   }
 
-  // Consent gate — must accept before using the app
+  // Consent gate
   if (!user.value.consentAcceptedAt && to.path !== '/consent') {
     return navigateTo('/consent')
   }
-
-  // Already consented — redirect away from consent page
   if (user.value.consentAcceptedAt && to.path === '/consent') {
     return navigateTo('/')
   }
 
-  // Admin route guard
+  // Route guards
   if (to.path.startsWith('/admin') && !['admin', 'developer'].includes(user.value.role as string)) {
+    return navigateTo('/admin/login')
+  }
+  if (to.path.startsWith('/agency') && !['agency_staff', 'admin', 'developer'].includes(user.value.role as string)) {
+    return navigateTo('/agency/login')
+  }
+  if (to.path.startsWith('/_admin') && !['admin', 'developer'].includes(user.value.role as string)) {
     return navigateTo('/')
   }
-
-  // Driver route guard
   if (to.path.startsWith('/driver') && !['driver', 'admin', 'developer'].includes(user.value.role as string)) {
-    return navigateTo('/')
+    return navigateTo('/driver/login')
   }
 })

@@ -1,26 +1,29 @@
-import { Ratelimit } from '@upstash/ratelimit'
+import { RateLimiterRedis } from 'rate-limiter-flexible'
 import { getRequestIP } from 'h3'
+import { useRedis } from '../utils/redis'
 
-let authLimiter: Ratelimit | undefined
-let apiLimiter: Ratelimit | undefined
+let authLimiter: RateLimiterRedis | undefined
+let apiLimiter: RateLimiterRedis | undefined
 
-function getAuthLimiter(): Ratelimit {
+function getAuthLimiter(): RateLimiterRedis {
   if (!authLimiter) {
-    authLimiter = new Ratelimit({
-      redis: useRedis(),
-      limiter: Ratelimit.slidingWindow(20, '1 m'),
-      prefix: 'rl:auth',
+    authLimiter = new RateLimiterRedis({
+      storeClient: useRedis(),
+      keyPrefix: 'rl:auth',
+      points: 20,
+      duration: 60,
     })
   }
   return authLimiter
 }
 
-function getApiLimiter(): Ratelimit {
+function getApiLimiter(): RateLimiterRedis {
   if (!apiLimiter) {
-    apiLimiter = new Ratelimit({
-      redis: useRedis(),
-      limiter: Ratelimit.slidingWindow(120, '1 m'),
-      prefix: 'rl:api',
+    apiLimiter = new RateLimiterRedis({
+      storeClient: useRedis(),
+      keyPrefix: 'rl:api',
+      points: 120,
+      duration: 60,
     })
   }
   return apiLimiter
@@ -29,7 +32,6 @@ function getApiLimiter(): Ratelimit {
 export default defineEventHandler(async (event) => {
   const path = event.path
 
-  // Only rate-limit API routes
   if (!path.startsWith('/api/')) return
 
   const ip = getRequestIP(event, { xForwardedFor: true }) ?? '127.0.0.1'
@@ -37,25 +39,16 @@ export default defineEventHandler(async (event) => {
   try {
     const isAuthRoute = path.startsWith('/api/auth/')
     const limiter = isAuthRoute ? getAuthLimiter() : getApiLimiter()
-    const identifier = `${ip}`
-
-    const { success, limit, remaining, reset } = await limiter.limit(identifier)
+    const res = await limiter.consume(ip)
 
     setResponseHeaders(event, {
-      'X-RateLimit-Limit': String(limit),
-      'X-RateLimit-Remaining': String(remaining),
-      'X-RateLimit-Reset': String(reset),
+      'X-RateLimit-Remaining': String(res.remainingPoints),
+      'X-RateLimit-Reset': String(new Date(Date.now() + res.msBeforeNext).toISOString()),
     })
-
-    if (!success) {
-      throw createError({
-        statusCode: 429,
-        statusMessage: 'Too Many Requests',
-      })
-    }
   } catch (err: any) {
-    // If it's our own 429 error, re-throw
-    if (err?.statusCode === 429) throw err
-    // Otherwise fail-open: let the request through
+    if (err?.remainingPoints !== undefined) {
+      throw createError({ statusCode: 429, statusMessage: 'Too Many Requests' })
+    }
+    // Redis 連線失敗時 fail-open
   }
 })

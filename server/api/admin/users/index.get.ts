@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
   const filter = {
     search: (query.search as string) || undefined,
     role: (query.role as string) || undefined,
+    organizationId: (query.organizationId as string) || undefined,
     tier: (query.tier as string) || undefined,
     convertedFromGuest: query.convertedFromGuest === 'true' ? true
       : query.convertedFromGuest === 'false' ? false

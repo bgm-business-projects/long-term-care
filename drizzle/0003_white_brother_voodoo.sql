@@ -1,0 +1,4 @@
+ALTER TABLE "service_points" ADD COLUMN "organization_id" text;--> statement-breakpoint
+ALTER TABLE "service_points" ADD COLUMN "care_recipient_id" text;--> statement-breakpoint
+ALTER TABLE "service_points" ADD CONSTRAINT "service_points_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "service_points" ADD CONSTRAINT "service_points_care_recipient_id_care_recipients_id_fk" FOREIGN KEY ("care_recipient_id") REFERENCES "public"."care_recipients"("id") ON DELETE cascade ON UPDATE no action;

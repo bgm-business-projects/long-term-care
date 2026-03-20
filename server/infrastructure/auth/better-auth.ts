@@ -12,6 +12,12 @@ function createAuthInstance() {
     database: drizzleAdapter(db, {
       provider: 'pg'
     }),
+    session: {
+      cookieCache: {
+        enabled: true,
+        maxAge: 5 * 60
+      }
+    },
     secret: config.betterAuth.secret,
     baseURL: config.betterAuth.url,
     emailAndPassword: {
@@ -52,6 +58,16 @@ function createAuthInstance() {
         role: {
           type: 'string',
           defaultValue: 'user',
+          input: false
+        },
+        organizationId: {
+          type: 'string',
+          required: false,
+          input: false
+        },
+        lastNotifiedTier: {
+          type: 'string',
+          required: false,
           input: false
         },
         banned: {

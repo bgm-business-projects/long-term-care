@@ -6,9 +6,8 @@ const { canChangeRole } = usePermissions()
 
 // Filters
 const search = ref('')
-const filterRole = ref('')
-const filterTier = ref('all')
-const filterGuestConvert = ref('all')
+const filterRole = ref<string | null>(null)
+const filterOrganizationId = ref<string | null>(null)
 const page = ref(1)
 const pageSize = 20
 
@@ -29,7 +28,14 @@ const detailLoading = ref(false)
 // Role edit form
 const roleForm = reactive({
   role: 'user' as string,
+  organizationId: '' as any,
 })
+
+// Organizations for agency_staff binding
+const organizations = ref<any[]>([])
+const organizationOptions = computed(() =>
+  organizations.value.map(o => ({ label: o.name, value: o.id }))
+)
 
 // Subscription edit form
 const subscriptionForm = reactive({
@@ -41,35 +47,26 @@ const subscriptionForm = reactive({
 // Delete confirmation
 const deleteConfirmText = ref('')
 
-const roleTabs = computed(() => [
-  { label: t('adminUsers.filter.all'), value: '' },
-  { label: t('adminUsers.filter.developer'), value: 'developer' },
-  { label: t('adminUsers.filter.admin'), value: 'admin' },
-  { label: t('adminUsers.filter.user'), value: 'user' },
+const roleFilterOptions = computed(() => [
+  { label: '全部角色', value: null },
+  { label: 'Developer', value: 'developer' },
+  { label: 'Admin', value: 'admin' },
+  { label: '一般用戶', value: 'user' },
+  { label: '機構人員', value: 'agency_staff' },
+  { label: '司機', value: 'driver' },
 ])
 
 const roleEditOptions = [
   { label: 'Developer', value: 'developer' },
   { label: 'Admin', value: 'admin' },
   { label: 'User', value: 'user' },
+  { label: '機構人員', value: 'agency_staff' },
+  { label: '司機', value: 'driver' },
 ]
 
-function onRoleFilterChange(value: string | number) {
-  filterRole.value = String(value)
-  page.value = 1
-}
-
-const tierFilterOptions = [
-  { label: t('adminUsers.filter.allTiers'), value: 'all' },
-  { label: 'Free', value: 'free' },
-  { label: 'Pro', value: 'pro' },
-  { label: 'Premium', value: 'premium' },
-]
-
-const guestConvertFilterOptions = computed(() => [
-  { label: t('adminUsers.filter.allUsers'), value: 'all' },
-  { label: t('adminUsers.filter.guestConvert'), value: 'true' },
-  { label: t('adminUsers.filter.directRegister'), value: 'false' },
+const organizationFilterOptions = computed(() => [
+  { label: '全部機構', value: null },
+  ...organizations.value.map(o => ({ label: o.name, value: o.id })),
 ])
 
 const tierEditOptions = [
@@ -100,8 +97,7 @@ async function loadUsers() {
     }
     if (search.value) params.search = search.value
     if (filterRole.value) params.role = filterRole.value
-    if (filterTier.value && filterTier.value !== 'all') params.tier = filterTier.value
-    if (filterGuestConvert.value && filterGuestConvert.value !== 'all') params.convertedFromGuest = filterGuestConvert.value
+    if (filterOrganizationId.value) params.organizationId = filterOrganizationId.value
 
     const data = await api<any>('/api/admin/users', { params })
     users.value = data.items
@@ -111,8 +107,13 @@ async function loadUsers() {
   }
 }
 
-onMounted(loadUsers)
-watch([search, filterRole, filterTier, filterGuestConvert, page], loadUsers)
+onMounted(async () => {
+  await Promise.all([
+    loadUsers(),
+    api<any[]>('/api/dispatch/organizations').then(r => { organizations.value = r }).catch(() => {}),
+  ])
+})
+watch([search, filterRole, filterOrganizationId, page], loadUsers)
 
 async function openDetail(u: any) {
   selectedUser.value = u
@@ -139,9 +140,10 @@ function openDeleteConfirm(u: any) {
   showDeleteModal.value = true
 }
 
-function openRoleEdit(u: any) {
+async function openRoleEdit(u: any) {
   selectedUser.value = u
   roleForm.role = u.role
+  roleForm.organizationId = u.organizationId || ''
   showRoleModal.value = true
 }
 
@@ -188,9 +190,13 @@ function getMenuItems(u: any) {
 async function handleRoleSave() {
   if (!selectedUser.value) return
   try {
+    const body: any = { role: roleForm.role }
+    if (roleForm.role === 'agency_staff' && roleForm.organizationId) {
+      body.organizationId = roleForm.organizationId
+    }
     await api(`/api/admin/users/${selectedUser.value.id}/role`, {
       method: 'PATCH',
-      body: { role: roleForm.role },
+      body,
     })
     toast.add({ title: t('adminUsers.toast.roleChanged'), color: 'success' })
     showRoleModal.value = false
@@ -272,7 +278,7 @@ const showingTo = computed(() => Math.min(page.value * pageSize, total.value))
 
 <template>
   <div class="space-y-6">
-    <!-- Search & Tier filter -->
+    <!-- Search & filters -->
     <div class="flex flex-col sm:flex-row gap-3">
       <UInput
         :model-value="debouncedSearch"
@@ -282,26 +288,18 @@ const showingTo = computed(() => Math.min(page.value * pageSize, total.value))
         class="flex-1"
       />
       <USelect
-        v-model="filterTier"
-        :items="tierFilterOptions"
+        v-model="filterRole"
+        :items="roleFilterOptions"
         value-key="value"
-        class="w-40"
+        class="w-36"
       />
       <USelect
-        v-model="filterGuestConvert"
-        :items="guestConvertFilterOptions"
+        v-model="filterOrganizationId"
+        :items="organizationFilterOptions"
         value-key="value"
-        class="w-48"
+        class="w-44"
       />
     </div>
-
-    <!-- Role filter tabs -->
-    <UTabs
-      :items="roleTabs"
-      :model-value="filterRole"
-      @update:model-value="onRoleFilterChange($event)"
-      variant="link"
-    />
 
     <!-- User list -->
     <div v-if="loading" class="text-center py-12 text-muted">
@@ -319,7 +317,7 @@ const showingTo = computed(() => Math.min(page.value * pageSize, total.value))
         class="p-3 border border-muted rounded-lg flex items-center gap-3"
       >
         <!-- Avatar -->
-        <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden">
           <img v-if="u.image" :src="u.image" :alt="u.name" class="w-full h-full object-cover" />
           <UIcon v-else name="i-lucide-user" class="text-lg text-muted" />
         </div>
@@ -359,7 +357,7 @@ const showingTo = computed(() => Math.min(page.value * pageSize, total.value))
     </div>
 
     <!-- User Detail Modal -->
-    <UModal v-model:open="showDetailModal" :title="t('adminUsers.detail.title')">
+    <UModal v-model:open="showDetailModal" :title="t('adminUsers.detail.title')" description=" ">
       <template #body>
         <div v-if="detailLoading" class="flex justify-center py-8">
           <UIcon name="i-lucide-loader-2" class="text-2xl animate-spin" />
@@ -416,7 +414,7 @@ const showingTo = computed(() => Math.min(page.value * pageSize, total.value))
     </UModal>
 
     <!-- Change Subscription Modal -->
-    <UModal v-model:open="showSubscriptionModal" :title="t('adminUsers.subscription.title')">
+    <UModal v-model:open="showSubscriptionModal" :title="t('adminUsers.subscription.title')" description=" ">
       <template #body>
         <div class="space-y-4 p-4">
           <div v-if="selectedUser" class="text-sm text-muted">
@@ -443,7 +441,7 @@ const showingTo = computed(() => Math.min(page.value * pageSize, total.value))
     </UModal>
 
     <!-- Change Role Modal -->
-    <UModal v-model:open="showRoleModal" :title="t('adminUsers.actions.changeRole')">
+    <UModal v-model:open="showRoleModal" :title="t('adminUsers.actions.changeRole')" description=" ">
       <template #body>
         <div class="space-y-4 p-4">
           <div v-if="selectedUser" class="text-sm text-muted">
@@ -451,6 +449,15 @@ const showingTo = computed(() => Math.min(page.value * pageSize, total.value))
           </div>
           <UFormField :label="t('adminUsers.detail.role')">
             <USelect v-model="roleForm.role" :items="roleEditOptions" value-key="value" class="w-full" />
+          </UFormField>
+          <UFormField v-if="roleForm.role === 'agency_staff'" label="綁定機構">
+            <USelect
+              v-model="roleForm.organizationId"
+              :items="organizationOptions"
+              value-key="value"
+              placeholder="選擇機構"
+              class="w-full"
+            />
           </UFormField>
           <div class="flex justify-end gap-2">
             <UButton :label="t('adminUsers.actions.cancel')" color="neutral" variant="outline" @click="showRoleModal = false" />
@@ -461,7 +468,7 @@ const showingTo = computed(() => Math.min(page.value * pageSize, total.value))
     </UModal>
 
     <!-- Delete User Confirm Modal -->
-    <UModal v-model:open="showDeleteModal" :title="t('adminUsers.delete.title')">
+    <UModal v-model:open="showDeleteModal" :title="t('adminUsers.delete.title')" description=" ">
       <template #body>
         <div class="space-y-4 p-4">
           <p class="text-sm text-muted">

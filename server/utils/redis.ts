@@ -1,10 +1,11 @@
-import { Redis } from '@upstash/redis'
+import Redis from 'ioredis'
 
 let instance: Redis | undefined
 
 export function useRedis(): Redis {
   if (!instance) {
-    instance = Redis.fromEnv()
+    const config = useRuntimeConfig()
+    instance = new Redis(config.redisUrl)
   }
   return instance
 }

@@ -5,6 +5,10 @@ export class UserPolicy {
     return role === 'developer' || role === 'admin'
   }
 
+  static isAgencyStaffOrAbove(role: string): boolean {
+    return role === 'developer' || role === 'admin' || role === 'agency_staff'
+  }
+
   static isDeveloper(role: string): boolean {
     return role === 'developer'
   }

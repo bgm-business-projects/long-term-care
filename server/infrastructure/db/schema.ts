@@ -17,6 +17,7 @@ export const user = pgTable('user', {
   consentAcceptedAt: timestamp('consent_accepted_at', { withTimezone: true, mode: 'date' }),
   onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true, mode: 'date' }),
   convertedFromGuestAt: timestamp('converted_from_guest_at', { withTimezone: true, mode: 'date' }),
+  organizationId: text('organization_id').references(() => organizations.id, { onDelete: 'set null' }),
   createdAt: timestamp('createdAt', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()),
   updatedAt: timestamp('updatedAt', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date())
 })
@@ -78,6 +79,7 @@ export const specialNeedsEnum = pgEnum('special_needs', ['general', 'wheelchair'
 export const tripStatusEnum = pgEnum('trip_status', ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'])
 export const tripLogStatusEnum = pgEnum('trip_log_status', ['departed', 'arrived_origin', 'recipient_boarded', 'completed'])
 export const servicePointCategoryEnum = pgEnum('service_point_category', ['hospital', 'rehab', 'other'])
+export const driverStatusEnum = pgEnum('driver_status', ['active', 'on_leave', 'resigned'])
 
 // ─── Dispatch System Tables ───────────────────────────────
 
@@ -100,6 +102,11 @@ export const driverProfiles = pgTable('driver_profiles', {
   phone: text('phone').notNull(),
   licenseExpiry: date('license_expiry', { mode: 'string' }),
   isActive: boolean('is_active').notNull().default(true),
+  status: driverStatusEnum('status').notNull().default('active'),
+  unavailableDates: text('unavailable_dates'),
+  emergencyContact: text('emergency_contact'),
+  emergencyPhone: text('emergency_phone'),
+  canDriveWheelchairVan: boolean('can_drive_wheelchair_van').notNull().default(false),
 })
 
 export const organizations = pgTable('organizations', {
@@ -129,6 +136,9 @@ export const careRecipients = pgTable('care_recipients', {
 
 export const servicePoints = pgTable('service_points', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  // null = 全域（admin 管理），organizationId set = 機構專屬，careRecipientId set = 個案專屬
+  organizationId: text('organization_id').references(() => organizations.id, { onDelete: 'cascade' }),
+  careRecipientId: text('care_recipient_id').references(() => careRecipients.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   address: text('address').notNull(),
   lat: numeric('lat', { precision: 10, scale: 7 }),
@@ -144,6 +154,8 @@ export const trips = pgTable('trips', {
   driverUserId: text('driver_user_id').references(() => user.id, { onDelete: 'set null' }),
   organizationId: text('organization_id').references(() => organizations.id, { onDelete: 'set null' }),
   scheduledAt: timestamp('scheduled_at', { withTimezone: true, mode: 'date' }).notNull(),
+  scheduledEndAt: timestamp('scheduled_end_at', { withTimezone: true, mode: 'date' }),
+  estimatedDuration: integer('estimated_duration'),
   originAddress: text('origin_address').notNull(),
   originLat: numeric('origin_lat', { precision: 10, scale: 7 }),
   originLng: numeric('origin_lng', { precision: 10, scale: 7 }),
@@ -186,16 +198,42 @@ export const recurringSchedules = pgTable('recurring_schedules', {
   needsWheelchair: boolean('needs_wheelchair').notNull().default(false),
   isActive: boolean('is_active').notNull().default(true),
   notes: text('notes'),
+  effectiveStartDate: date('effective_start_date', { mode: 'string' }),
+  effectiveEndDate: date('effective_end_date', { mode: 'string' }),
+  estimatedDuration: integer('estimated_duration'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 })
 
+export const announcements = pgTable('announcements', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  authorUserId: text('author_user_id').notNull().references(() => user.id, { onDelete: 'restrict' }),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  isPublished: boolean('is_published').notNull().default(false),
+  publishedAt: timestamp('published_at', { withTimezone: true, mode: 'date' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
+})
+
+export const systemSettings = pgTable('system_settings', {
+  key: text('key').primaryKey(),
+  value: text('value'),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
+  updatedBy: text('updated_by').references(() => user.id, { onDelete: 'set null' }),
+})
+
 // ─── Relations ────────────────────────────────────────────
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
   accounts: many(account),
   redemptionCodes: many(redemptionCode),
+  organization: one(organizations, { fields: [user.organizationId], references: [organizations.id] }),
+  driverProfile: one(driverProfiles, { fields: [user.id], references: [driverProfiles.userId] }),
+  driverTrips: many(trips),
+  tripStatusLogs: many(tripStatusLogs),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -210,14 +248,6 @@ export const redemptionCodeRelations = relations(redemptionCode, ({ one }) => ({
   usedBy: one(user, { fields: [redemptionCode.usedById], references: [user.id] })
 }))
 
-// ─── Dispatch Relations ────────────────────────────────────
-
-export const userDispatchRelations = relations(user, ({ one, many }) => ({
-  driverProfile: one(driverProfiles, { fields: [user.id], references: [driverProfiles.userId] }),
-  driverTrips: many(trips),
-  tripStatusLogs: many(tripStatusLogs),
-}))
-
 export const driverProfileRelations = relations(driverProfiles, ({ one }) => ({
   user: one(user, { fields: [driverProfiles.userId], references: [user.id] }),
 }))
@@ -226,6 +256,7 @@ export const organizationRelations = relations(organizations, ({ many }) => ({
   careRecipients: many(careRecipients),
   trips: many(trips),
   recurringSchedules: many(recurringSchedules),
+  users: many(user),
 }))
 
 export const careRecipientRelations = relations(careRecipients, ({ one, many }) => ({
@@ -254,4 +285,8 @@ export const vehicleRelations = relations(vehicles, ({ many }) => ({
 export const recurringScheduleRelations = relations(recurringSchedules, ({ one }) => ({
   careRecipient: one(careRecipients, { fields: [recurringSchedules.careRecipientId], references: [careRecipients.id] }),
   organization: one(organizations, { fields: [recurringSchedules.organizationId], references: [organizations.id] }),
+}))
+
+export const announcementRelations = relations(announcements, ({ one }) => ({
+  author: one(user, { fields: [announcements.authorUserId], references: [user.id] }),
 }))
