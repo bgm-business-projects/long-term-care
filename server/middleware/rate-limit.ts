@@ -1,30 +1,30 @@
-import { RateLimiterRedis } from 'rate-limiter-flexible'
+import { RateLimiterRedis, RateLimiterMemory } from 'rate-limiter-flexible'
 import { getRequestIP } from 'h3'
 import { useRedis } from '../utils/redis'
 
-let authLimiter: RateLimiterRedis | undefined
-let apiLimiter: RateLimiterRedis | undefined
+type Limiter = RateLimiterRedis | RateLimiterMemory
 
-function getAuthLimiter(): RateLimiterRedis {
+let authLimiter: Limiter | undefined
+let apiLimiter: Limiter | undefined
+
+function createLimiter(keyPrefix: string, points: number, duration: number): Limiter {
+  const redis = useRedis()
+  if (redis) {
+    return new RateLimiterRedis({ storeClient: redis, keyPrefix, points, duration })
+  }
+  return new RateLimiterMemory({ keyPrefix, points, duration })
+}
+
+function getAuthLimiter(): Limiter {
   if (!authLimiter) {
-    authLimiter = new RateLimiterRedis({
-      storeClient: useRedis(),
-      keyPrefix: 'rl:auth',
-      points: 20,
-      duration: 60,
-    })
+    authLimiter = createLimiter('rl:auth', 20, 60)
   }
   return authLimiter
 }
 
-function getApiLimiter(): RateLimiterRedis {
+function getApiLimiter(): Limiter {
   if (!apiLimiter) {
-    apiLimiter = new RateLimiterRedis({
-      storeClient: useRedis(),
-      keyPrefix: 'rl:api',
-      points: 120,
-      duration: 60,
-    })
+    apiLimiter = createLimiter('rl:api', 120, 60)
   }
   return apiLimiter
 }
