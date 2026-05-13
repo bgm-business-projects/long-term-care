@@ -5,7 +5,8 @@ ARG NODE_VERSION=22-alpine
 
 FROM node:${NODE_VERSION} AS base
 RUN apk add --no-cache libc6-compat bash
-RUN corepack enable
+# 用 npm 直接裝 pnpm（避免 corepack 在某些 node 版本需 --force-cache-update）
+RUN npm install -g --no-audit --no-fund pnpm@10.18.2
 WORKDIR /app
 
 # ── deps stage：安裝完整 dependencies（含 dev，build 用） ──

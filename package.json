@@ -53,5 +53,12 @@
     "drizzle-kit": "^0.31.9",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild",
+      "vue-demi"
+    ]
   }
 }
