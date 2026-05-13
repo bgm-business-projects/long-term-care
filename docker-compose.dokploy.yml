@@ -118,9 +118,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
-    networks:
-      - default
-      - dokploy-network
     labels:
       - "traefik.enable=true"
       # 把 https://<域名>/files/<key> 反代到 minio:9000/<bucket>/<key>
@@ -155,8 +152,3 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
-
-networks:
-  # Dokploy 預設 Traefik 所在網路；必須是 external 才能讓 Traefik 抓到 labels
-  dokploy-network:
-    external: true
