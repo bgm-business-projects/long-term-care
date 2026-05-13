@@ -23,26 +23,27 @@ ENV NITRO_PRESET=node-server
 ENV NODE_ENV=production
 RUN pnpm build
 
-# ── runner stage：.output（self-contained server）+ migration 用的小型 deps ──
+# ── runner stage：.output + 完整 node_modules（給 migration/seed scripts 用） ──
 FROM base AS runner
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000
 
-# Nuxt 的 .output/server 本身已內含 server 需要的 deps（Nitro 打包）
+# Nuxt 的 .output/server 已內含 server 需要的 deps（Nitro 打包）
 COPY --from=builder /app/.output ./.output
 
-# 額外只裝 migration 需要的 tooling（避免完整 pnpm install 的副作用）
-RUN npm install -g --no-audit --no-fund tsx@4.20.6 \
- && npm install --omit=dev --no-save --no-audit --no-fund \
-    drizzle-orm@0.45.1 \
-    postgres@3.4.7
-# Migration 用的檔案
+# tsx 全域裝（給 entrypoint 與 seed 用）
+RUN npm install -g --no-audit --no-fund tsx@4.20.6
+
+# 完整安裝 deps，scripts/seed*.ts 才能 import 到 @noble/hashes / @better-auth/utils 等
+COPY package.json pnpm-lock.yaml .npmrc* ./
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts
+
+# Migration / seed 用的檔案
 COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/scripts/migrate.ts ./scripts/migrate.ts
-COPY --from=builder /app/server/infrastructure/db ./server/infrastructure/db
-COPY --from=builder /app/server/domain ./server/domain
-COPY --from=builder /app/server/shared ./server/shared
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/server ./server
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
