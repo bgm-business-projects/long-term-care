@@ -5,10 +5,42 @@ const settings = ref<any[]>([])
 const googleMapsKey = ref('')
 const saving = ref(false)
 
+// 共乘設定
+interface CarpoolSettings {
+  maxDestinationDistanceMeters: number
+  maxDepartureWindowMinutes: number
+}
+const carpool = ref<CarpoolSettings>({ maxDestinationDistanceMeters: 500, maxDepartureWindowMinutes: 30 })
+const carpoolSaving = ref(false)
+
+async function loadCarpool() {
+  try {
+    carpool.value = await api<CarpoolSettings>('/api/admin/settings/carpool')
+  } catch {
+    // 用預設值
+  }
+}
+
+async function saveCarpool() {
+  carpoolSaving.value = true
+  try {
+    await api('/api/admin/settings/carpool', {
+      method: 'PUT',
+      body: carpool.value,
+    })
+    toast.add({ title: '共乘設定已儲存', color: 'success' })
+  } catch (err: any) {
+    toast.add({ title: err?.data?.statusMessage || '儲存失敗', color: 'error' })
+  } finally {
+    carpoolSaving.value = false
+  }
+}
+
 onMounted(async () => {
   settings.value = await api<any[]>('/api/admin/settings')
   const gmSetting = settings.value.find(s => s.key === 'google_maps_api_key')
   googleMapsKey.value = gmSetting?.hasValue ? '' : ''  // 不顯示現有值
+  await loadCarpool()
 })
 
 async function saveGoogleMapsKey() {
@@ -43,6 +75,21 @@ async function saveGoogleMapsKey() {
           <UInput v-model="googleMapsKey" type="password" placeholder="輸入新的 API Key..." class="flex-1" />
           <UButton @click="saveGoogleMapsKey" :loading="saving" :disabled="!googleMapsKey.trim()">儲存</UButton>
         </div>
+      </div>
+    </div>
+
+    <!-- 共乘設定 -->
+    <div class="border border-default rounded-xl p-4 space-y-4">
+      <h2 class="font-semibold">共乘設定</h2>
+      <p class="text-xs text-muted">這兩個門檻用於判定哪些訂單可共乘。</p>
+      <UFormField label="目的地距離門檻（公尺）" hint="兩筆訂單目的地距離小於此值才視為「同一目的地」">
+        <UInput v-model.number="carpool.maxDestinationDistanceMeters" type="number" :min="50" :max="10000" class="w-full" />
+      </UFormField>
+      <UFormField label="出發時間窗口（分鐘）" hint="兩筆訂單出發時間相差小於等於此值才可同組">
+        <UInput v-model.number="carpool.maxDepartureWindowMinutes" type="number" :min="5" :max="240" class="w-full" />
+      </UFormField>
+      <div class="flex justify-end">
+        <UButton :loading="carpoolSaving" icon="i-lucide-save" @click="saveCarpool">儲存共乘設定</UButton>
       </div>
     </div>
   </div>

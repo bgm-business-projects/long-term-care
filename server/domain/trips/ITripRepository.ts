@@ -3,7 +3,12 @@ import type { TripLogStatus, TripStatus, TripWithDetails } from './TripEntity'
 export interface IDriverTripQueryRepository {
   getDriverTripsForDate(driverUserId: string, date: Date): Promise<TripWithDetails[]>
   getTripById(id: string, driverUserId: string): Promise<TripWithDetails | null>
-  getDriverTripHistory(driverUserId: string, limit: number, offset: number): Promise<TripWithDetails[]>
+  getDriverTripHistory(
+    driverUserId: string,
+    limit: number,
+    offset: number,
+    dateRange?: { startDate: Date; endDate: Date },
+  ): Promise<TripWithDetails[]>
 }
 
 export interface CreateStatusLogDto {

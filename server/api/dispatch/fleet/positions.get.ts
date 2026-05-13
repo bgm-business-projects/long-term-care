@@ -31,7 +31,10 @@ export default defineEventHandler(async (event) => {
       t.vehicle_id IS NOT NULL
       AND t.status IN ('assigned', 'in_progress')
       AND DATE(t.scheduled_at AT TIME ZONE 'Asia/Taipei') = ${todayStr}
-    ORDER BY t.vehicle_id, tsl.timestamp DESC
+    ORDER BY
+      t.vehicle_id,
+      CASE t.status WHEN 'in_progress' THEN 0 WHEN 'assigned' THEN 1 ELSE 2 END,
+      tsl.timestamp DESC NULLS LAST
   `)
 
   return (positions as any[]).filter((p: any) => p.lat && p.lng)

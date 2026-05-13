@@ -5,7 +5,10 @@ const { api } = useApi()
 const trips = ref<any[]>([])
 const loading = ref(false)
 
-const filterDate = ref(new Date().toISOString().slice(0, 10))
+const todayIso = new Date().toISOString().slice(0, 10)
+const dateRange = ref<{ from: string; to: string }>({ from: todayIso, to: todayIso })
+const filterDateFrom = computed(() => dateRange.value.from)
+const filterDateTo = computed(() => dateRange.value.to)
 const filterStatus = ref<string | null>(null)
 
 const showCancelModal = ref(false)
@@ -159,7 +162,7 @@ const specialNeedsLabel: Record<string, string> = {
 
 const statusColor: Record<string, string> = {
   pending: 'warning',
-  confirmed: 'info',
+  assigned: 'info',
   in_progress: 'primary',
   completed: 'success',
   cancelled: 'neutral',
@@ -173,10 +176,15 @@ const filteredTrips = computed(() => {
 })
 
 async function loadTrips() {
+  if (filterDateFrom.value && filterDateTo.value && filterDateFrom.value > filterDateTo.value) {
+    toast.add({ title: '起始日不可大於結束日', color: 'warning' })
+    return
+  }
   loading.value = true
   try {
     const params = new URLSearchParams()
-    if (filterDate.value) params.set('date', filterDate.value)
+    if (filterDateFrom.value) params.set('dateFrom', filterDateFrom.value)
+    if (filterDateTo.value) params.set('dateTo', filterDateTo.value)
     if (filterStatus.value) params.set('status', filterStatus.value)
     const query = params.toString()
     trips.value = await api<any[]>(`/api/dispatch/trips${query ? '?' + query : ''}`)
@@ -189,7 +197,7 @@ async function loadTrips() {
 
 onMounted(loadTrips)
 
-watch([filterDate], loadTrips)
+watch(dateRange, loadTrips, { deep: true })
 
 function formatDateTime(dt: string) {
   if (!dt) return '-'
@@ -238,14 +246,10 @@ async function handleCancel() {
     </div>
 
     <!-- Filters -->
-    <div class="flex gap-3 flex-wrap">
+    <div class="flex gap-3 flex-wrap items-end">
       <div>
-        <label class="text-xs text-muted block mb-1">日期</label>
-        <input
-          v-model="filterDate"
-          type="date"
-          class="px-3 py-2 border border-default rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
+        <label class="text-xs text-muted block mb-1">日期區間</label>
+        <DateRangePicker v-model="dateRange" />
       </div>
       <div>
         <label class="text-xs text-muted block mb-1">狀態</label>

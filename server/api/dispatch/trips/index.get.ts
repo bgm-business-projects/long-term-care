@@ -15,6 +15,8 @@ export default defineEventHandler(async (event) => {
 
   const filter = {
     date: (query.date as string) || undefined,
+    dateFrom: (query.dateFrom as string) || undefined,
+    dateTo: (query.dateTo as string) || undefined,
     status: (query.status as string) || undefined,
     organizationId: organizationId || undefined,
     vehicleId: (query.vehicleId as string) || undefined,

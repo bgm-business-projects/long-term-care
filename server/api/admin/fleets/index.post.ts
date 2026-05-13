@@ -1,0 +1,21 @@
+import { z } from 'zod/v4'
+import { requireAdmin } from '../../../utils/requireAdmin'
+import { useFleetServices } from '../../../utils/fleetServices'
+import { parseBody } from '../../../shared/contracts/validation'
+
+const Schema = z.object({
+  name: z.string().min(1).max(100),
+  contactPerson: z.string().max(100).nullable().optional(),
+  phone: z.string().max(20).nullable().optional(),
+  address: z.string().max(500).nullable().optional(),
+  taxId: z.string().max(20).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+})
+
+export default defineEventHandler(async (event) => {
+  await requireAdmin(event)
+  const dto = await parseBody(event, Schema)
+  const { create } = useFleetServices()
+  setResponseStatus(event, 201)
+  return create(dto)
+})

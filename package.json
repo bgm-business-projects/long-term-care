@@ -14,6 +14,7 @@
     "db:reset": "npx tsx scripts/reset-and-migrate.ts",
     "db:seed": "npx tsx --env-file=.env scripts/seed.ts",
     "db:seed:test": "npx tsx --env-file=.env scripts/seed-test-data.ts",
+    "db:seed:june": "npx tsx --env-file=.env scripts/seed-june-2026.ts",
     "db:clear:test": "npx tsx --env-file=.env scripts/clear-test-data.ts"
   },
   "dependencies": {
@@ -30,6 +31,8 @@
     "chartjs-plugin-datalabels": "^2.2.0",
     "drizzle-orm": "^0.45.1",
     "exceljs": "^4.4.0",
+    "html-to-image": "^1.11.13",
+    "html2canvas": "^1.4.1",
     "ioredis": "^5.10.0",
     "leaflet": "^1.9.4",
     "nuxt": "^4.3.1",

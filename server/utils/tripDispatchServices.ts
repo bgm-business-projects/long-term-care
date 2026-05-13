@@ -1,9 +1,11 @@
 import { useDb } from '../infrastructure/db/drizzle'
-import { trips, careRecipients, vehicles, user } from '../infrastructure/db/schema'
+import { trips, careRecipients, vehicles, user, organizations } from '../infrastructure/db/schema'
 import { eq, and, gte, lte, desc } from 'drizzle-orm'
 
 export interface TripListFilter {
   date?: string
+  dateFrom?: string
+  dateTo?: string
   status?: string
   organizationId?: string
   vehicleId?: string
@@ -69,7 +71,19 @@ export async function listTrips(filter: TripListFilter) {
     conditions.push(eq(trips.driverUserId, filter.driverUserId))
   }
 
-  if (filter.date) {
+  // 優先使用 dateFrom/dateTo 區間；若只給 date 則沿用單日
+  if (filter.dateFrom || filter.dateTo) {
+    if (filter.dateFrom) {
+      const start = new Date(filter.dateFrom)
+      start.setHours(0, 0, 0, 0)
+      conditions.push(gte(trips.scheduledAt, start))
+    }
+    if (filter.dateTo) {
+      const end = new Date(filter.dateTo)
+      end.setHours(23, 59, 59, 999)
+      conditions.push(lte(trips.scheduledAt, end))
+    }
+  } else if (filter.date) {
     const start = new Date(filter.date)
     start.setHours(0, 0, 0, 0)
     const end = new Date(filter.date)
@@ -105,11 +119,13 @@ export async function listTrips(filter: TripListFilter) {
       careRecipientName: careRecipients.name,
       vehiclePlate: vehicles.plate,
       driverName: driverUser.name,
+      organizationName: organizations.name,
     })
     .from(trips)
     .leftJoin(careRecipients, eq(trips.careRecipientId, careRecipients.id))
     .leftJoin(vehicles, eq(trips.vehicleId, vehicles.id))
     .leftJoin(driverUser, eq(trips.driverUserId, driverUser.id))
+    .leftJoin(organizations, eq(trips.organizationId, organizations.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(trips.scheduledAt))
 
@@ -139,6 +155,8 @@ export async function listTrips(filter: TripListFilter) {
     careRecipient: row.careRecipientName ? { name: row.careRecipientName } : null,
     vehicle: row.vehiclePlate ? { plate: row.vehiclePlate } : null,
     driver: row.driverName ? { name: row.driverName } : null,
+    organization: row.organizationName ? { id: row.organizationId, name: row.organizationName } : null,
+    source: row.organizationId ? 'organization' as const : 'platform' as const,
   }))
 }
 
@@ -171,7 +189,6 @@ export async function getTripById(id: string) {
       updatedAt: trips.updatedAt,
       careRecipientName: careRecipients.name,
       careRecipientAddress: careRecipients.address,
-      careRecipientSpecialNeeds: careRecipients.specialNeeds,
       vehiclePlate: vehicles.plate,
       vehicleType: vehicles.vehicleType,
       driverName: driverUser.name,
@@ -184,11 +201,10 @@ export async function getTripById(id: string) {
     .where(eq(trips.id, id))
     .limit(1)
 
-  if (rows.length === 0) {
+  const row = rows[0]
+  if (!row) {
     return null
   }
-
-  const row = rows[0]
   return {
     id: row.id,
     careRecipientId: row.careRecipientId,
@@ -216,7 +232,6 @@ export async function getTripById(id: string) {
       ? {
           name: row.careRecipientName,
           address: row.careRecipientAddress,
-          specialNeeds: row.careRecipientSpecialNeeds,
         }
       : null,
     vehicle: row.vehiclePlate
@@ -240,6 +255,13 @@ export async function createTrip(data: TripCreateData) {
 
   const organizationId = recipient[0]?.organizationId ?? null
 
+  // 司機=車 1:1 — 若指定司機但未指定車輛，自動帶入司機的車
+  let vehicleId = data.vehicleId ?? null
+  if (data.driverUserId && !vehicleId) {
+    const v = await db.select({ id: vehicles.id }).from(vehicles).where(eq(vehicles.driverUserId, data.driverUserId)).limit(1)
+    vehicleId = v[0]?.id ?? null
+  }
+
   const scheduledAt = new Date(data.scheduledAt)
 
   let scheduledEndAt: Date | null = null
@@ -247,14 +269,14 @@ export async function createTrip(data: TripCreateData) {
     scheduledEndAt = new Date(scheduledAt.getTime() + data.estimatedDuration * 60 * 1000)
   }
 
-  const status = data.vehicleId && data.driverUserId ? 'assigned' : 'pending'
+  const status = vehicleId && data.driverUserId ? 'assigned' : 'pending'
 
   const inserted = await db
     .insert(trips)
     .values({
       careRecipientId: data.careRecipientId,
       organizationId,
-      vehicleId: data.vehicleId ?? null,
+      vehicleId,
       driverUserId: data.driverUserId ?? null,
       scheduledAt,
       scheduledEndAt,
@@ -271,6 +293,9 @@ export async function createTrip(data: TripCreateData) {
     })
     .returning()
 
+  if (!inserted[0]) {
+    throw createError({ statusCode: 500, statusMessage: 'Failed to create trip' })
+  }
   return getTripById(inserted[0].id)
 }
 
@@ -301,7 +326,14 @@ export async function updateTrip(id: string, data: TripUpdateData) {
 
   if (data.careRecipientId !== undefined) updateValues.careRecipientId = data.careRecipientId
   if (data.vehicleId !== undefined) updateValues.vehicleId = data.vehicleId
-  if (data.driverUserId !== undefined) updateValues.driverUserId = data.driverUserId
+  if (data.driverUserId !== undefined) {
+    updateValues.driverUserId = data.driverUserId
+    // 司機=車 1:1 — 換司機時，若 caller 未指定車輛，自動帶入司機的車
+    if (data.driverUserId && data.vehicleId === undefined) {
+      const v = await db.select({ id: vehicles.id }).from(vehicles).where(eq(vehicles.driverUserId, data.driverUserId)).limit(1)
+      updateValues.vehicleId = v[0]?.id ?? null
+    }
+  }
   if (data.scheduledAt !== undefined) updateValues.scheduledAt = new Date(data.scheduledAt)
   if (data.scheduledEndAt !== undefined) updateValues.scheduledEndAt = new Date(data.scheduledEndAt)
   if (data.estimatedDuration !== undefined) updateValues.estimatedDuration = data.estimatedDuration

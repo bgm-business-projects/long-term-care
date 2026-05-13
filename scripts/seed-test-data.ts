@@ -156,42 +156,43 @@ async function seedTestData() {
     organizationId: orgIds[1], // 仁愛護理之家
   })
 
-  // ── 3. 車輛 ─────────────────────────────────────────────
-  console.log('\n🚗 建立車輛...')
-  const vehicles = [
-    { plate: 'ABC-1234', vehicleType: '廂型車', seatCount: 7, hasWheelchairLift: false, wheelchairCapacity: 0, notes: '主力接送車' },
-    { plate: 'DEF-5678', vehicleType: '輪椅車', seatCount: 4, hasWheelchairLift: true, wheelchairCapacity: 2, notes: '具備輪椅升降設備' },
-    { plate: 'GHI-9012', vehicleType: '轎車', seatCount: 4, hasWheelchairLift: false, wheelchairCapacity: 0, notes: '小型接送' },
-    { plate: 'JKL-3456', vehicleType: '輪椅車', seatCount: 4, hasWheelchairLift: true, wheelchairCapacity: 1, notes: '備用輪椅車' },
-    { plate: 'MNO-7890', vehicleType: '廂型車', seatCount: 9, hasWheelchairLift: false, wheelchairCapacity: 0, notes: '大型廂型車' },
+  // ── 3. 車行 ────────────────────────────────────────────
+  console.log('\n🏢 建立車行...')
+  const fleetSeed = [
+    { name: '大都會車隊', contactPerson: '王經理', phone: '02-2345-6789', address: '台北市中正區忠孝西路一段50號', taxId: '12345678' },
+    { name: '安心無障礙車行', contactPerson: '李經理', phone: '02-2987-6543', address: '台北市大安區仁愛路四段100號', taxId: '87654321' },
   ]
-
-  const vehicleIds: string[] = []
-  for (const v of vehicles) {
-    const existing = await db.select({ id: schema.vehicles.id })
-      .from(schema.vehicles).where(eq(schema.vehicles.plate, v.plate)).limit(1)
+  const fleetIds: string[] = []
+  for (const f of fleetSeed) {
+    const existing = await db.select({ id: schema.fleets.id })
+      .from(schema.fleets).where(eq(schema.fleets.name, f.name)).limit(1)
     if (existing.length > 0) {
-      vehicleIds.push(existing[0].id)
-      console.log(`  ⏭  ${v.plate} already exists`)
+      fleetIds.push(existing[0].id)
+      console.log(`  ⏭  ${f.name} already exists`)
       continue
     }
-    const [row] = await db.insert(schema.vehicles).values({ id: crypto.randomUUID(), ...v })
-      .returning({ id: schema.vehicles.id })
-    vehicleIds.push(row.id)
-    console.log(`  ✅ ${v.plate} (${v.vehicleType})`)
+    const [row] = await db.insert(schema.fleets).values({ id: crypto.randomUUID(), ...f })
+      .returning({ id: schema.fleets.id })
+    fleetIds.push(row.id)
+    console.log(`  ✅ ${f.name}`)
   }
 
-  // ── 4. 司機 ─────────────────────────────────────────────
-  console.log('\n🧑‍✈️ 建立司機...')
-  const drivers = [
-    { email: 'driver-chen@test.com', name: '陳大偉', phone: '0912-345-678', licenseExpiry: '2027-06-30', canDriveWheelchairVan: true, emergencyContact: '陳太太', emergencyPhone: '0922-111-222' },
-    { email: 'driver-lin@test.com', name: '林志明', phone: '0923-456-789', licenseExpiry: '2026-12-31', canDriveWheelchairVan: true, emergencyContact: '林太太', emergencyPhone: '0933-222-333' },
-    { email: 'driver-wu@test.com', name: '吳建國', phone: '0934-567-890', licenseExpiry: '2027-03-15', canDriveWheelchairVan: false, emergencyContact: '吳太太', emergencyPhone: '0944-333-444' },
-    { email: 'driver-zhang@test.com', name: '張正義', phone: '0945-678-901', licenseExpiry: '2026-09-30', canDriveWheelchairVan: false, emergencyContact: '張太太', emergencyPhone: '0955-444-555' },
+  // ── 4. 司機 + 車輛 (1:1) ────────────────────────────────
+  console.log('\n🧑‍✈️ 建立司機與車輛...')
+  const driverSeed = [
+    { email: 'driver-chen@test.com', name: '陳大偉', phone: '0912-345-678', licenseExpiry: '2027-06-30', emergencyContact: '陳太太', emergencyPhone: '0922-111-222', fleetIdx: 0,
+      vehicle: { plate: 'ABC-1234', vehicleType: '廂型車', seatCount: 7, isAccessible: false, wheelchairCapacity: 0, homeAddress: '台北市中正區忠孝西路一段50號', homeLat: 25.0466, homeLng: 121.5174, notes: '主力接送車' } },
+    { email: 'driver-lin@test.com', name: '林志明', phone: '0923-456-789', licenseExpiry: '2026-12-31', emergencyContact: '林太太', emergencyPhone: '0933-222-333', fleetIdx: 1,
+      vehicle: { plate: 'DEF-5678', vehicleType: '輪椅車', seatCount: 4, isAccessible: true, wheelchairCapacity: 2, homeAddress: '台北市大安區仁愛路四段100號', homeLat: 25.0376, homeLng: 121.5512, notes: '具備輪椅升降設備' } },
+    { email: 'driver-wu@test.com', name: '吳建國', phone: '0934-567-890', licenseExpiry: '2027-03-15', emergencyContact: '吳太太', emergencyPhone: '0944-333-444', fleetIdx: 0,
+      vehicle: { plate: 'GHI-9012', vehicleType: '轎車', seatCount: 4, isAccessible: false, wheelchairCapacity: 0, homeAddress: '台北市信義區松仁路100號', homeLat: 25.0334, homeLng: 121.5662, notes: '小型接送' } },
+    { email: 'driver-zhang@test.com', name: '張正義', phone: '0945-678-901', licenseExpiry: '2026-09-30', emergencyContact: '張太太', emergencyPhone: '0955-444-555', fleetIdx: null,
+      vehicle: { plate: 'JKL-3456', vehicleType: '輪椅車', seatCount: 4, isAccessible: true, wheelchairCapacity: 1, homeAddress: '台北市萬華區康定路50號', homeLat: 25.0418, homeLng: 121.5021, notes: '獨立司機備用車' } },
   ]
 
   const driverUserIds: string[] = []
-  for (const d of drivers) {
+  const vehicleIds: string[] = []
+  for (const d of driverSeed) {
     const userId = await ensureUser({
       email: d.email,
       name: d.name,
@@ -200,7 +201,6 @@ async function seedTestData() {
     })
     driverUserIds.push(userId)
 
-    // 建立 driverProfile
     const existingProfile = await db.select({ id: schema.driverProfiles.id })
       .from(schema.driverProfiles)
       .where(eq(schema.driverProfiles.userId, userId))
@@ -210,30 +210,57 @@ async function seedTestData() {
       await db.insert(schema.driverProfiles).values({
         id: crypto.randomUUID(),
         userId,
+        fleetId: d.fleetIdx === null ? null : fleetIds[d.fleetIdx],
         phone: d.phone,
         licenseExpiry: d.licenseExpiry,
         status: 'active',
-        canDriveWheelchairVan: d.canDriveWheelchairVan,
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        termsAcceptedAt: new Date(),
         emergencyContact: d.emergencyContact,
         emergencyPhone: d.emergencyPhone,
       })
-      console.log(`  ✅ 司機 ${d.name} + profile`)
+      console.log(`  ✅ 司機 ${d.name} + profile (approved)`)
     }
+
+    const existingVehicle = await db.select({ id: schema.vehicles.id })
+      .from(schema.vehicles).where(eq(schema.vehicles.driverUserId, userId)).limit(1)
+    if (existingVehicle.length > 0) {
+      vehicleIds.push(existingVehicle[0].id)
+      console.log(`  ⏭  ${d.vehicle.plate} already exists`)
+      continue
+    }
+    const [vRow] = await db.insert(schema.vehicles).values({
+      id: crypto.randomUUID(),
+      driverUserId: userId,
+      plate: d.vehicle.plate,
+      vehicleType: d.vehicle.vehicleType,
+      seatCount: d.vehicle.seatCount,
+      wheelchairCapacity: d.vehicle.wheelchairCapacity,
+      isAccessible: d.vehicle.isAccessible,
+      isRental: false,
+      homeAddress: d.vehicle.homeAddress,
+      homeLat: String(d.vehicle.homeLat),
+      homeLng: String(d.vehicle.homeLng),
+      notes: d.vehicle.notes,
+    }).returning({ id: schema.vehicles.id })
+    vehicleIds.push(vRow.id)
+    console.log(`  ✅ ${d.vehicle.plate} (${d.vehicle.vehicleType})`)
   }
 
   // ── 5. 照護個案 ─────────────────────────────────────────
   console.log('\n🏥 建立照護個案...')
   const careRecipients = [
     // 陽光長照中心的個案
-    { organizationId: orgIds[0], name: '陳爺爺', address: '台北市中正區重慶南路一段10號', lat: 25.0425, lng: 121.5135, contactPerson: '陳小姐', contactPhone: '0911-111-111', specialNeeds: 'general' as const, notes: '行動緩慢，需攙扶上下車' },
-    { organizationId: orgIds[0], name: '林奶奶', address: '台北市中正區南昌路二段5號', lat: 25.0305, lng: 121.5145, contactPerson: '林先生', contactPhone: '0911-222-222', specialNeeds: 'wheelchair' as const, notes: '需輪椅接送，固定洗腎' },
-    { organizationId: orgIds[0], name: '黃伯伯', address: '台北市萬華區西園路二段30號', lat: 25.0285, lng: 121.4975, contactPerson: '黃太太', contactPhone: '0911-333-333', specialNeeds: 'general' as const, notes: '聽力不佳，請大聲說話' },
-    { organizationId: orgIds[0], name: '張阿嬤', address: '台北市大同區延平北路三段20號', lat: 25.0625, lng: 121.5105, contactPerson: '張先生', contactPhone: '0911-444-444', specialNeeds: 'bedridden' as const, notes: '臥床個案，需擔架接送' },
+    { organizationId: orgIds[0], name: '陳爺爺', address: '台北市中正區重慶南路一段10號', lat: 25.0425, lng: 121.5135, contactPerson: '陳小姐', contactPhone: '0911-111-111', notes: '行動緩慢，需攙扶上下車' },
+    { organizationId: orgIds[0], name: '林奶奶', address: '台北市中正區南昌路二段5號', lat: 25.0305, lng: 121.5145, contactPerson: '林先生', contactPhone: '0911-222-222', notes: '需輪椅接送，固定洗腎' },
+    { organizationId: orgIds[0], name: '黃伯伯', address: '台北市萬華區西園路二段30號', lat: 25.0285, lng: 121.4975, contactPerson: '黃太太', contactPhone: '0911-333-333', notes: '聽力不佳，請大聲說話' },
+    { organizationId: orgIds[0], name: '張阿嬤', address: '台北市大同區延平北路三段20號', lat: 25.0625, lng: 121.5105, contactPerson: '張先生', contactPhone: '0911-444-444', notes: '臥床個案，需擔架接送' },
     // 仁愛護理之家的個案
-    { organizationId: orgIds[1], name: '劉爺爺', address: '台北市大安區信義路四段15號', lat: 25.0335, lng: 121.5485, contactPerson: '劉太太', contactPhone: '0911-555-555', specialNeeds: 'wheelchair' as const, notes: '電動輪椅，較重' },
-    { organizationId: orgIds[1], name: '王奶奶', address: '台北市信義區松仁路50號', lat: 25.0355, lng: 121.5675, contactPerson: '王小姐', contactPhone: '0911-666-666', specialNeeds: 'general' as const, notes: '需提前10分鐘到達' },
-    { organizationId: orgIds[1], name: '趙伯伯', address: '台北市松山區民生東路五段10號', lat: 25.0585, lng: 121.5605, contactPerson: '趙先生', contactPhone: '0911-777-777', specialNeeds: 'general' as const, notes: '有輕微失智，請耐心等候' },
-    { organizationId: orgIds[1], name: '周阿嬤', address: '台北市內湖區成功路四段25號', lat: 25.0795, lng: 121.5875, contactPerson: '周先生', contactPhone: '0911-888-888', specialNeeds: 'wheelchair' as const, notes: '手動輪椅' },
+    { organizationId: orgIds[1], name: '劉爺爺', address: '台北市大安區信義路四段15號', lat: 25.0335, lng: 121.5485, contactPerson: '劉太太', contactPhone: '0911-555-555', notes: '電動輪椅，較重' },
+    { organizationId: orgIds[1], name: '王奶奶', address: '台北市信義區松仁路50號', lat: 25.0355, lng: 121.5675, contactPerson: '王小姐', contactPhone: '0911-666-666', notes: '需提前10分鐘到達' },
+    { organizationId: orgIds[1], name: '趙伯伯', address: '台北市松山區民生東路五段10號', lat: 25.0585, lng: 121.5605, contactPerson: '趙先生', contactPhone: '0911-777-777', notes: '有輕微失智，請耐心等候' },
+    { organizationId: orgIds[1], name: '周阿嬤', address: '台北市內湖區成功路四段25號', lat: 25.0795, lng: 121.5875, contactPerson: '周先生', contactPhone: '0911-888-888', notes: '手動輪椅' },
   ]
 
   const careRecipientIds: string[] = []
@@ -251,7 +278,7 @@ async function seedTestData() {
       lng: cr.lng != null ? String(cr.lng) : null,
     }).returning({ id: schema.careRecipients.id })
     careRecipientIds.push(row.id)
-    console.log(`  ✅ ${cr.name} (${cr.specialNeeds}) - ${cr.organizationId === orgIds[0] ? '陽光' : '仁愛'}`)
+    console.log(`  ✅ ${cr.name} - ${cr.organizationId === orgIds[0] ? '陽光' : '仁愛'}`)
   }
 
   // ── 6. 服務據點 ─────────────────────────────────────────
@@ -740,8 +767,9 @@ async function seedTestData() {
 📊 資料摘要：
   • 機構：${orgs.length} 間
   • 機構人員：2 位
-  • 車輛：${vehicles.length} 台（含 ${vehicles.filter(v => v.hasWheelchairLift).length} 台輪椅車）
-  • 司機：${drivers.length} 位（${drivers.filter(d => d.canDriveWheelchairVan).length} 位可駕駛輪椅車）
+  • 車行：${fleetSeed.length} 間
+  • 車輛：${driverSeed.length} 台（含 ${driverSeed.filter(d => d.vehicle.isAccessible).length} 台無障礙車）
+  • 司機：${driverSeed.length} 位（${driverSeed.filter(d => d.vehicle.isAccessible).length} 位駕駛無障礙車）
   • 照護個案：${careRecipients.length} 位
   • 服務據點：${servicePoints.length} 個
   • 週期性排程：${recurringSchedules.length} 筆

@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   const parsed = StatusSchema.safeParse(body)
   if (!parsed.success) {
     console.warn(`[driver/trips/:id/status] validation failed:`, parsed.error.issues)
-    throw createError({ statusCode: 400, statusMessage: parsed.error.issues[0].message })
+    throw createError({ statusCode: 400, statusMessage: parsed.error.issues[0]?.message ?? 'Invalid input' })
   }
 
   const { driver } = useTripServices()

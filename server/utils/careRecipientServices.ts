@@ -1,5 +1,5 @@
 import { useDb } from '../infrastructure/db/drizzle'
-import { careRecipients } from '../infrastructure/db/schema'
+import { careRecipients, organizations } from '../infrastructure/db/schema'
 import { eq, and, ilike } from 'drizzle-orm'
 
 export interface CareRecipientListFilter {
@@ -16,7 +16,6 @@ export interface CareRecipientCreateData {
   lng?: string
   contactPerson?: string
   contactPhone?: string
-  specialNeeds?: 'general' | 'wheelchair' | 'bedridden'
   notes?: string
 }
 
@@ -28,7 +27,6 @@ export interface CareRecipientUpdateData {
   lng?: string
   contactPerson?: string
   contactPhone?: string
-  specialNeeds?: 'general' | 'wheelchair' | 'bedridden'
   notes?: string
   isActive?: boolean
 }
@@ -51,8 +49,23 @@ export async function listCareRecipients(filter: CareRecipientListFilter) {
   }
 
   const rows = await db
-    .select()
+    .select({
+      id: careRecipients.id,
+      organizationId: careRecipients.organizationId,
+      name: careRecipients.name,
+      address: careRecipients.address,
+      lat: careRecipients.lat,
+      lng: careRecipients.lng,
+      contactPerson: careRecipients.contactPerson,
+      contactPhone: careRecipients.contactPhone,
+      notes: careRecipients.notes,
+      isActive: careRecipients.isActive,
+      createdAt: careRecipients.createdAt,
+      updatedAt: careRecipients.updatedAt,
+      organizationName: organizations.name,
+    })
     .from(careRecipients)
+    .leftJoin(organizations, eq(careRecipients.organizationId, organizations.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
 
   return rows
@@ -87,7 +100,6 @@ export async function createCareRecipient(data: CareRecipientCreateData) {
       lng: data.lng ?? null,
       contactPerson: data.contactPerson ?? null,
       contactPhone: data.contactPhone ?? null,
-      specialNeeds: data.specialNeeds ?? 'general',
       notes: data.notes ?? null,
     })
     .returning()
@@ -106,8 +118,7 @@ export async function updateCareRecipient(id: string, data: CareRecipientUpdateD
     lng?: string | null
     contactPerson?: string | null
     contactPhone?: string | null
-    specialNeeds?: 'general' | 'wheelchair' | 'bedridden'
-    notes?: string | null
+      notes?: string | null
     isActive?: boolean
   }
 
@@ -119,7 +130,6 @@ export async function updateCareRecipient(id: string, data: CareRecipientUpdateD
   if (data.lng !== undefined) updateValues.lng = data.lng
   if (data.contactPerson !== undefined) updateValues.contactPerson = data.contactPerson
   if (data.contactPhone !== undefined) updateValues.contactPhone = data.contactPhone
-  if (data.specialNeeds !== undefined) updateValues.specialNeeds = data.specialNeeds
   if (data.notes !== undefined) updateValues.notes = data.notes
   if (data.isActive !== undefined) updateValues.isActive = data.isActive
 

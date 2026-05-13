@@ -1,6 +1,6 @@
 import { useDb } from '../infrastructure/db/drizzle'
 import { recurringSchedules, careRecipients } from '../infrastructure/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, isNull } from 'drizzle-orm'
 
 export interface RecurringScheduleCreateData {
   careRecipientId: string
@@ -18,6 +18,8 @@ export interface RecurringScheduleCreateData {
   effectiveStartDate?: string
   effectiveEndDate?: string
   estimatedDuration?: number
+  roundTrip?: boolean
+  returnDepartureTime?: string | null  // HH:mm
 }
 
 export interface RecurringScheduleUpdateData {
@@ -35,6 +37,8 @@ export interface RecurringScheduleUpdateData {
   effectiveStartDate?: string
   effectiveEndDate?: string
   estimatedDuration?: number
+  roundTrip?: boolean
+  returnDepartureTime?: string | null
 }
 
 export function useRecurringScheduleServices() {
@@ -43,6 +47,7 @@ export function useRecurringScheduleServices() {
   const list = async (filter: {
     careRecipientId?: string
     organizationId?: string
+    organizationIdIsNull?: boolean
     activeOnly?: boolean
   }) => {
     const conditions = []
@@ -50,7 +55,9 @@ export function useRecurringScheduleServices() {
     if (filter.careRecipientId) {
       conditions.push(eq(recurringSchedules.careRecipientId, filter.careRecipientId))
     }
-    if (filter.organizationId) {
+    if (filter.organizationIdIsNull) {
+      conditions.push(isNull(recurringSchedules.organizationId))
+    } else if (filter.organizationId) {
       conditions.push(eq(recurringSchedules.organizationId, filter.organizationId))
     }
     if (filter.activeOnly) {
@@ -77,6 +84,8 @@ export function useRecurringScheduleServices() {
         effectiveStartDate: recurringSchedules.effectiveStartDate,
         effectiveEndDate: recurringSchedules.effectiveEndDate,
         estimatedDuration: recurringSchedules.estimatedDuration,
+        roundTrip: recurringSchedules.roundTrip,
+        returnDepartureTime: recurringSchedules.returnDepartureTime,
         createdAt: recurringSchedules.createdAt,
         updatedAt: recurringSchedules.updatedAt,
       })
@@ -106,6 +115,8 @@ export function useRecurringScheduleServices() {
         effectiveStartDate: recurringSchedules.effectiveStartDate,
         effectiveEndDate: recurringSchedules.effectiveEndDate,
         estimatedDuration: recurringSchedules.estimatedDuration,
+        roundTrip: recurringSchedules.roundTrip,
+        returnDepartureTime: recurringSchedules.returnDepartureTime,
         createdAt: recurringSchedules.createdAt,
         updatedAt: recurringSchedules.updatedAt,
       })
@@ -136,6 +147,8 @@ export function useRecurringScheduleServices() {
         effectiveStartDate: data.effectiveStartDate ?? null,
         effectiveEndDate: data.effectiveEndDate ?? null,
         estimatedDuration: data.estimatedDuration ?? null,
+        roundTrip: data.roundTrip ?? false,
+        returnDepartureTime: data.returnDepartureTime ?? null,
         isActive: true,
       })
       .returning()
@@ -159,6 +172,8 @@ export function useRecurringScheduleServices() {
       effectiveStartDate?: string | null
       effectiveEndDate?: string | null
       estimatedDuration?: number | null
+      roundTrip?: boolean
+      returnDepartureTime?: string | null
     }
 
     const updateValues: DbUpdate = {}
@@ -176,6 +191,8 @@ export function useRecurringScheduleServices() {
     if (data.effectiveStartDate !== undefined) updateValues.effectiveStartDate = data.effectiveStartDate
     if (data.effectiveEndDate !== undefined) updateValues.effectiveEndDate = data.effectiveEndDate
     if (data.estimatedDuration !== undefined) updateValues.estimatedDuration = data.estimatedDuration
+    if (data.roundTrip !== undefined) updateValues.roundTrip = data.roundTrip
+    if (data.returnDepartureTime !== undefined) updateValues.returnDepartureTime = data.returnDepartureTime
 
     if (Object.keys(updateValues).length === 0) {
       return getById(id)
@@ -247,7 +264,36 @@ export function useRecurringScheduleServices() {
           careRecipientId: schedule.careRecipientId,
           organizationId: schedule.organizationId,
           notes: schedule.notes,
+          tripDirection: schedule.roundTrip ? 'outbound' : null,
+          isReturn: false,
         })
+
+        // 若 roundTrip 且有回程時間 → 再展開一筆回程（起終點互換）
+        if (schedule.roundTrip && schedule.returnDepartureTime) {
+          const [rh, rm] = schedule.returnDepartureTime.split(':').map(Number)
+          const returnAt = new Date(cursor)
+          returnAt.setHours(rh, rm, 0, 0)
+          occurrences.push({
+            scheduleId: id,
+            scheduledAt: returnAt.toISOString(),
+            scheduledEndAt: schedule.estimatedDuration
+              ? new Date(returnAt.getTime() + schedule.estimatedDuration * 60000).toISOString()
+              : null,
+            estimatedDuration: schedule.estimatedDuration,
+            originAddress: schedule.destinationAddress,
+            originLat: schedule.destinationLat,
+            originLng: schedule.destinationLng,
+            destinationAddress: schedule.originAddress,
+            destinationLat: schedule.originLat,
+            destinationLng: schedule.originLng,
+            needsWheelchair: schedule.needsWheelchair,
+            careRecipientId: schedule.careRecipientId,
+            organizationId: schedule.organizationId,
+            notes: schedule.notes ? `${schedule.notes}（回程）` : '回程',
+            tripDirection: 'return',
+            isReturn: true,
+          })
+        }
       }
       cursor.setDate(cursor.getDate() + 1)
     }

@@ -2,11 +2,17 @@
 const toast = useToast()
 const { api } = useApi()
 const router = useRouter()
+const { fetchDistanceMeters } = useDistance()
+
+interface Device { id: string; name: string }
+interface Fleet { id: string; name: string }
+interface Driver { id: string; userId: string; fleetId: string | null; user: { name: string } }
 
 const recipients = ref<any[]>([])
 const servicePoints = ref<any[]>([])
-const drivers = ref<any[]>([])
-const vehicles = ref<any[]>([])
+const drivers = ref<Driver[]>([])
+const fleets = ref<Fleet[]>([])
+const devices = ref<Device[]>([])
 const submitting = ref(false)
 const showSuccessModal = ref(false)
 
@@ -19,10 +25,13 @@ const formData = reactive({
   destinationAddress: '',
   destinationLat: null as number | null,
   destinationLng: null as number | null,
-  needsWheelchair: false,
+  deviceIds: [] as string[],
+  fleetId: null as string | null,
   driverUserId: null as string | null,
-  vehicleId: null as string | null,
   notes: '',
+  roundTrip: false,
+  returnScheduledAt: '',
+  returnEstimatedDuration: 0,
 })
 
 const selectedServicePoint = ref<string | null>(null)
@@ -48,34 +57,57 @@ const servicePointOptions = computed(() => [
   })),
 ])
 
+const fleetOptions = computed(() => [
+  { label: '全部車行', value: null },
+  ...fleets.value.map(f => ({ label: f.name, value: f.id })),
+  { label: '獨立司機 (無車行)', value: '__none__' },
+])
+
+const filteredDrivers = computed<Driver[]>(() => {
+  if (formData.fleetId === null) return drivers.value
+  if (formData.fleetId === '__none__') return drivers.value.filter(d => !d.fleetId)
+  return drivers.value.filter(d => d.fleetId === formData.fleetId)
+})
+
 const driverOptions = computed(() => [
   { label: '（不指派）', value: null },
-  ...drivers.value.map((d: any) => ({
-    label: d.name || d.user?.name || d.userId,
-    value: d.userId || d.id,
+  ...filteredDrivers.value.map(d => ({
+    label: d.user?.name || d.userId,
+    value: d.userId,
   })),
 ])
 
-const vehicleOptions = computed(() => [
-  { label: '（不指派）', value: null },
-  ...vehicles.value.map((v: any) => ({
-    label: `${v.plate}　${v.vehicleType}`,
-    value: v.id,
-  })),
-])
+const deviceOptions = computed(() => devices.value.map(d => ({ label: d.name, value: d.id })))
 
 async function loadData() {
   try {
-    const [r, d, v] = await Promise.all([
+    const [r, d, f, dev] = await Promise.all([
       api<any[]>('/api/dispatch/care-recipients'),
-      api<any[]>('/api/dispatch/drivers').catch(() => [] as any[]),
-      api<any[]>('/api/dispatch/vehicles').catch(() => [] as any[]),
+      api<Driver[]>('/api/dispatch/drivers').catch(() => [] as Driver[]),
+      api<Fleet[]>('/api/fleets').catch(() => [] as Fleet[]),
+      api<Device[]>('/api/dispatch/devices').catch(() => [] as Device[]),
     ])
     recipients.value = r
     drivers.value = d
-    vehicles.value = v
+    fleets.value = f
+    devices.value = dev
   } catch (err: any) {
     toast.add({ title: '載入資料失敗', color: 'error' })
+  }
+}
+
+watch(() => formData.fleetId, () => {
+  if (!formData.driverUserId) return
+  const driverInList = filteredDrivers.value.some(d => d.userId === formData.driverUserId)
+  if (!driverInList) formData.driverUserId = null
+})
+
+async function loadRecipientDevices(id: string) {
+  try {
+    const detail = await api<{ devices?: Device[] }>(`/api/dispatch/care-recipients/${id}`)
+    formData.deviceIds = (detail.devices || []).map(d => d.id)
+  } catch {
+    formData.deviceIds = []
   }
 }
 
@@ -98,15 +130,61 @@ onMounted(loadData)
 watch(() => formData.careRecipientId, (id) => {
   selectedServicePoint.value = null
   loadServicePoints(id)
-  if (!id) return
+  if (!id) {
+    formData.deviceIds = []
+    return
+  }
   const recipient = recipients.value.find((r: any) => r.id === id)
   if (recipient) {
     formData.originAddress = recipient.address || ''
     formData.originLat = recipient.lat != null ? Number(recipient.lat) : null
     formData.originLng = recipient.lng != null ? Number(recipient.lng) : null
-    formData.needsWheelchair = ['wheelchair', 'bedridden'].includes(recipient.specialNeeds)
   }
+  loadRecipientDevices(id)
 })
+
+// 距離計算
+const distanceMeters = ref<number | null>(null)
+const distanceText = ref<string>('')
+const distanceLoading = ref(false)
+const distanceKm = computed(() => distanceMeters.value == null ? null : distanceMeters.value / 1000)
+const isLongDistance = computed(() => distanceKm.value != null && distanceKm.value > 10)
+
+async function recalcDistance() {
+  const origin = (formData.originLat != null && formData.originLng != null)
+    ? { lat: formData.originLat, lng: formData.originLng }
+    : (formData.originAddress.trim() || null)
+  const destination = (formData.destinationLat != null && formData.destinationLng != null)
+    ? { lat: formData.destinationLat, lng: formData.destinationLng }
+    : (formData.destinationAddress.trim() || null)
+
+  if (!origin || !destination) {
+    distanceMeters.value = null
+    distanceText.value = ''
+    return
+  }
+
+  distanceLoading.value = true
+  const result = await fetchDistanceMeters(origin, destination)
+  distanceLoading.value = false
+  if (result) {
+    distanceMeters.value = result.meters
+    distanceText.value = result.text
+  } else {
+    distanceMeters.value = null
+    distanceText.value = ''
+  }
+}
+
+let distanceDebounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => [formData.originLat, formData.originLng, formData.destinationLat, formData.destinationLng,
+    formData.originAddress, formData.destinationAddress],
+  () => {
+    if (distanceDebounceTimer) clearTimeout(distanceDebounceTimer)
+    distanceDebounceTimer = setTimeout(recalcDistance, 600)
+  },
+)
 
 function onServicePointSelect(val: string | null) {
   if (!val) return
@@ -127,11 +205,13 @@ function resetForm() {
   formData.destinationAddress = ''
   formData.destinationLat = null
   formData.destinationLng = null
-  formData.needsWheelchair = false
+  formData.deviceIds = []
+  formData.fleetId = null
   formData.driverUserId = null
-  formData.vehicleId = null
   formData.notes = ''
   selectedServicePoint.value = null
+  distanceMeters.value = null
+  distanceText.value = ''
 }
 
 async function submitOrder() {
@@ -151,12 +231,25 @@ async function submitOrder() {
     toast.add({ title: '請填寫終點地址', color: 'error' })
     return
   }
+  if (formData.roundTrip && !formData.returnScheduledAt) {
+    toast.add({ title: '勾選來回時請填寫回程出發時間', color: 'error' })
+    return
+  }
+  if (formData.roundTrip && formData.returnScheduledAt && formData.returnScheduledAt <= formData.scheduledAt) {
+    toast.add({ title: '回程時間必須晚於去程時間', color: 'error' })
+    return
+  }
+
+  const wheelchairDevice = devices.value.find(d => d.name.includes('輪椅'))
+  const needsWheelchair = wheelchairDevice ? formData.deviceIds.includes(wheelchairDevice.id) : false
 
   submitting.value = true
   try {
+    const { fleetId: _fleetId, ...payload } = formData
+    void _fleetId
     await api('/api/dispatch/trips', {
       method: 'POST',
-      body: { ...formData },
+      body: { ...payload, needsWheelchair },
     })
     resetForm()
     showSuccessModal.value = true
@@ -230,26 +323,43 @@ async function submitOrder() {
         />
       </div>
 
-      <!-- 是否需輪椅 -->
-      <div class="flex items-center gap-3">
-        <UCheckbox v-model="formData.needsWheelchair" />
-        <label class="text-sm font-medium">需要輪椅輔助</label>
+      <!-- 距離 -->
+      <div v-if="distanceLoading" class="text-xs text-muted">計算距離中…</div>
+      <div v-else-if="distanceKm != null" class="flex items-center gap-2 text-sm">
+        <UIcon name="i-lucide-route" class="w-4 h-4" />
+        <span :class="isLongDistance ? 'text-red-500 font-semibold' : ''">
+          預估駕駛距離：{{ distanceText }}
+          <span v-if="isLongDistance">（超過 10 公里，請留意）</span>
+        </span>
       </div>
 
-      <!-- 指派司機 -->
-      <UFormField label="指派司機（選填）">
-        <USelect
-          v-model="formData.driverUserId"
-          :items="driverOptions"
+      <!-- 攜帶輔具 -->
+      <UFormField label="會攜帶輔具">
+        <USelectMenu
+          v-model="formData.deviceIds"
+          :items="deviceOptions"
+          value-key="value"
+          multiple
+          searchable
+          placeholder="可多選；選擇個案後會自動帶入該個案常用輔具"
           class="w-full"
         />
       </UFormField>
 
-      <!-- 指派車輛 -->
-      <UFormField label="指派車輛（選填）">
+      <!-- 指派車行 -->
+      <UFormField label="指派車行（選填）" hint="先選車行可篩選下方司機">
         <USelect
-          v-model="formData.vehicleId"
-          :items="vehicleOptions"
+          v-model="formData.fleetId"
+          :items="fleetOptions"
+          class="w-full"
+        />
+      </UFormField>
+
+      <!-- 指派司機 -->
+      <UFormField label="指派司機（選填）" hint="指派司機後系統自動帶入該司機的車輛">
+        <USelect
+          v-model="formData.driverUserId"
+          :items="driverOptions"
           class="w-full"
         />
       </UFormField>
@@ -258,6 +368,37 @@ async function submitOrder() {
       <UFormField label="備註（選填）">
         <UTextarea v-model="formData.notes" placeholder="備注事項..." class="w-full" />
       </UFormField>
+
+      <!-- 來回 -->
+      <div class="border border-default rounded-md p-3 space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <UCheckbox v-model="formData.roundTrip" />
+          <span class="text-sm font-medium">需要回程（原車去原車回）</span>
+        </label>
+        <div v-if="formData.roundTrip" class="grid grid-cols-2 gap-3 pl-6 pt-1">
+          <div>
+            <label class="text-xs text-muted block mb-1">回程出發時間 *</label>
+            <input
+              v-model="formData.returnScheduledAt"
+              type="datetime-local"
+              class="w-full px-3 py-2 border border-default rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label class="text-xs text-muted block mb-1">回程預估時長 (分鐘)</label>
+            <input
+              v-model.number="formData.returnEstimatedDuration"
+              type="number"
+              min="0"
+              placeholder="留 0 = 與去程相同"
+              class="w-full px-3 py-2 border border-default rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </div>
+        <p v-if="formData.roundTrip" class="text-xs text-muted pl-6">
+          回程起點為去程終點、回程終點為去程起點；指派的司機/車輛同一台。
+        </p>
+      </div>
 
       <!-- Actions -->
       <div class="flex items-center gap-3 pt-2">

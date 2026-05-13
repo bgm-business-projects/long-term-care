@@ -44,11 +44,15 @@ export class DriverTripService {
     return trip
   }
 
-  async getTripHistory(driverUserId: string, page: number): Promise<TripWithDetails[]> {
+  async getTripHistory(
+    driverUserId: string,
+    page: number,
+    dateRange?: { startDate: Date; endDate: Date },
+  ): Promise<TripWithDetails[]> {
     const limit = 20
     const offset = (page - 1) * limit
-    console.log(`[DriverTripService] getTripHistory driver=${driverUserId} page=${page} offset=${offset}`)
-    const trips = await this.query.getDriverTripHistory(driverUserId, limit, offset)
+    console.log(`[DriverTripService] getTripHistory driver=${driverUserId} page=${page} offset=${offset} range=${dateRange ? `${dateRange.startDate.toISOString()}~${dateRange.endDate.toISOString()}` : 'none'}`)
+    const trips = await this.query.getDriverTripHistory(driverUserId, limit, offset, dateRange)
     console.log(`[DriverTripService] found ${trips.length} history trips`)
     return trips
   }

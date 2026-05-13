@@ -1,10 +1,20 @@
 <script setup lang="ts">
 const toast = useToast()
 const { api } = useApi()
+const route = useRoute()
+const router = useRouter()
 
 const drivers = ref<any[]>([])
+const fleets = ref<{ id: string; name: string }[]>([])
 const loading = ref(false)
 const search = ref('')
+const ALL_FLEETS = '__all__'
+const approvalFilter = ref<'all' | 'pending' | 'approved' | 'rejected'>(
+  (route.query.approval as 'pending' | 'approved' | 'rejected') || 'all',
+)
+const fleetFilter = ref<string>(
+  (route.query.fleetId as string) || (route.query.fleet === 'none' ? '__none__' : ALL_FLEETS),
+)
 
 const showAddModal = ref(false)
 const showEditModal = ref(false)
@@ -13,23 +23,49 @@ const editingItem = ref<any>(null)
 const deletingItem = ref<any>(null)
 const saving = ref(false)
 
+const NO_FLEET = '__none__'
+
 const addForm = reactive({
   name: '',
   email: '',
   phone: '',
+  fleetId: NO_FLEET,
   licenseExpiry: '',
   emergencyContact: '',
   emergencyPhone: '',
-  canDriveWheelchairVan: false,
 })
 
 const editForm = reactive({
   phone: '',
+  fleetId: NO_FLEET,
   licenseExpiry: '',
   emergencyContact: '',
   emergencyPhone: '',
-  canDriveWheelchairVan: false,
 })
+
+const fleetItems = computed(() => [
+  { label: '獨立司機 (無車行)', value: NO_FLEET },
+  ...fleets.value.map(f => ({ label: f.name, value: f.id })),
+])
+
+const fleetFilterItems = computed(() => [
+  { label: '全部車行', value: ALL_FLEETS },
+  { label: '獨立司機 (無車行)', value: NO_FLEET },
+  ...fleets.value.map(f => ({ label: f.name, value: f.id })),
+])
+
+const approvalFilterItems = [
+  { label: '全部', value: 'all' },
+  { label: '待審核', value: 'pending' },
+  { label: '已核准', value: 'approved' },
+  { label: '已拒絕', value: 'rejected' },
+]
+
+function approvalBadge(status: string) {
+  if (status === 'approved') return { color: 'success' as const, text: '已核准' }
+  if (status === 'rejected') return { color: 'error' as const, text: '已拒絕' }
+  return { color: 'warning' as const, text: '待審核' }
+}
 
 function getLicenseStatus(expiry: string | null) {
   if (!expiry) return 'none'
@@ -40,19 +76,55 @@ function getLicenseStatus(expiry: string | null) {
 }
 
 const filteredDrivers = computed(() => {
-  if (!search.value) return drivers.value
-  const q = search.value.toLowerCase()
-  return drivers.value.filter(d =>
-    d.user?.name?.toLowerCase().includes(q) ||
-    d.phone?.toLowerCase().includes(q)
+  let list = drivers.value
+  if (approvalFilter.value !== 'all') {
+    list = list.filter(d => d.approvalStatus === approvalFilter.value)
+  }
+  if (fleetFilter.value !== ALL_FLEETS) {
+    if (fleetFilter.value === NO_FLEET) {
+      list = list.filter(d => !d.fleetId)
+    } else {
+      list = list.filter(d => d.fleetId === fleetFilter.value)
+    }
+  }
+  if (search.value) {
+    const q = search.value.toLowerCase()
+    list = list.filter(d =>
+      d.user?.name?.toLowerCase().includes(q) ||
+      d.phone?.toLowerCase().includes(q),
+    )
+  }
+  return [...list].sort((a, b) =>
+    (a.user?.name || '').localeCompare(b.user?.name || '', 'zh-Hant'),
   )
+})
+
+// 同步 filter 狀態到 URL query
+watch([approvalFilter, fleetFilter], ([approval, fleet]) => {
+  const query: Record<string, string> = {}
+  if (approval !== 'all') query.approval = approval
+  if (fleet === NO_FLEET) query.fleet = 'none'
+  else if (fleet !== ALL_FLEETS) query.fleetId = fleet
+  router.replace({ query })
+})
+
+// 響應 URL query 變動（其他頁導入時帶 query）
+watch(() => route.query, (q) => {
+  approvalFilter.value = (q.approval as 'pending' | 'approved' | 'rejected') || 'all'
+  if (q.fleetId) fleetFilter.value = q.fleetId as string
+  else if (q.fleet === 'none') fleetFilter.value = NO_FLEET
+  else fleetFilter.value = ALL_FLEETS
 })
 
 async function loadDrivers() {
   loading.value = true
   try {
-    const res = await api<any[]>('/api/dispatch/drivers')
-    drivers.value = res
+    const [driverRes, fleetRes] = await Promise.all([
+      api<any[]>('/api/dispatch/drivers?approvalStatus=all'),
+      api<{ id: string; name: string }[]>('/api/fleets'),
+    ])
+    drivers.value = driverRes
+    fleets.value = fleetRes
   } catch (err: any) {
     toast.add({ title: err?.data?.statusMessage || '載入失敗', color: 'error' })
   } finally {
@@ -66,10 +138,10 @@ function openAdd() {
   addForm.name = ''
   addForm.email = ''
   addForm.phone = ''
+  addForm.fleetId = NO_FLEET
   addForm.licenseExpiry = ''
   addForm.emergencyContact = ''
   addForm.emergencyPhone = ''
-  addForm.canDriveWheelchairVan = false
   showAddModal.value = true
 }
 
@@ -82,7 +154,7 @@ async function handleAdd() {
   try {
     await api('/api/dispatch/drivers', {
       method: 'POST',
-      body: { ...addForm },
+      body: { ...addForm, fleetId: addForm.fleetId === NO_FLEET ? null : addForm.fleetId },
     })
     showAddModal.value = false
     toast.add({
@@ -100,10 +172,10 @@ async function handleAdd() {
 function openEdit(d: any) {
   editingItem.value = d
   editForm.phone = d.phone || ''
+  editForm.fleetId = d.fleetId || NO_FLEET
   editForm.licenseExpiry = d.licenseExpiry ? d.licenseExpiry.substring(0, 10) : ''
   editForm.emergencyContact = d.emergencyContact || ''
   editForm.emergencyPhone = d.emergencyPhone || ''
-  editForm.canDriveWheelchairVan = d.canDriveWheelchairVan || false
   showEditModal.value = true
 }
 
@@ -113,7 +185,7 @@ async function handleEdit() {
   try {
     await api(`/api/dispatch/drivers/${editingItem.value.id}`, {
       method: 'PUT',
-      body: { ...editForm },
+      body: { ...editForm, fleetId: editForm.fleetId === NO_FLEET ? null : editForm.fleetId },
     })
     toast.add({ title: '司機資料已更新', color: 'success' })
     showEditModal.value = false
@@ -156,8 +228,12 @@ function formatDate(iso: string | null) {
       <UButton icon="i-lucide-plus" @click="openAdd">新增司機</UButton>
     </div>
 
-    <!-- Search -->
-    <UInput v-model="search" placeholder="搜尋姓名、電話..." icon="i-lucide-search" class="max-w-sm" />
+    <!-- Search + Filter -->
+    <div class="flex flex-wrap items-center gap-2">
+      <UInput v-model="search" placeholder="搜尋姓名、電話..." icon="i-lucide-search" class="max-w-sm" />
+      <USelectMenu v-model="approvalFilter" :items="approvalFilterItems" value-key="value" placeholder="審核狀態" class="w-40" />
+      <USelectMenu v-model="fleetFilter" :items="fleetFilterItems" value-key="value" placeholder="車行" class="w-48" />
+    </div>
 
     <!-- Loading -->
     <div v-if="loading" class="flex justify-center py-12">
@@ -175,18 +251,24 @@ function formatDate(iso: string | null) {
         <thead class="bg-muted/40">
           <tr>
             <th class="text-left px-4 py-3 font-medium text-muted">姓名</th>
+            <th class="text-left px-4 py-3 font-medium text-muted">車行</th>
             <th class="text-left px-4 py-3 font-medium text-muted">電話</th>
-            <th class="text-left px-4 py-3 font-medium text-muted">駕照效期</th>
-            <th class="text-center px-4 py-3 font-medium text-muted">駕照狀態</th>
+            <th class="text-center px-4 py-3 font-medium text-muted">審核</th>
+            <th class="text-center px-4 py-3 font-medium text-muted">護照效期</th>
             <th class="text-center px-4 py-3 font-medium text-muted">帳號狀態</th>
             <th class="px-4 py-3"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-muted">
           <tr v-for="d in filteredDrivers" :key="d.id" class="hover:bg-muted/20 transition-colors">
-            <td class="px-4 py-3 font-medium text-highlighted">{{ d.user?.name || '-' }}</td>
+            <td class="px-4 py-3 font-medium text-highlighted">
+              <NuxtLink :to="`/admin/drivers/${d.id}`" class="hover:underline">{{ d.user?.name || '-' }}</NuxtLink>
+            </td>
+            <td class="px-4 py-3">{{ d.fleet?.name || '獨立' }}</td>
             <td class="px-4 py-3">{{ d.phone || '-' }}</td>
-            <td class="px-4 py-3">{{ formatDate(d.licenseExpiry) }}</td>
+            <td class="px-4 py-3 text-center">
+              <UBadge :color="approvalBadge(d.approvalStatus).color" variant="subtle">{{ approvalBadge(d.approvalStatus).text }}</UBadge>
+            </td>
             <td class="px-4 py-3 text-center">
               <UBadge
                 v-if="getLicenseStatus(d.licenseExpiry) === 'expired'"
@@ -207,10 +289,12 @@ function formatDate(iso: string | null) {
             </td>
             <td class="px-4 py-3 text-center">
               <UBadge v-if="d.user?.banned" color="error" variant="subtle">停用</UBadge>
-              <UBadge v-else color="success" variant="subtle">啟用</UBadge>
+              <UBadge v-else-if="d.isActive" color="success" variant="subtle">啟用</UBadge>
+              <UBadge v-else color="neutral" variant="subtle">已停用</UBadge>
             </td>
             <td class="px-4 py-3">
               <div class="flex items-center justify-end gap-2">
+                <UButton size="xs" color="primary" variant="ghost" icon="i-lucide-eye" :to="`/admin/drivers/${d.id}`">詳情</UButton>
                 <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-edit" @click="openEdit(d)">編輯</UButton>
                 <UButton size="xs" color="error" variant="ghost" icon="i-lucide-ban" @click="openDelete(d)">停用</UButton>
               </div>
@@ -242,10 +326,9 @@ function formatDate(iso: string | null) {
           <UFormField label="緊急聯絡電話">
             <UInput v-model="addForm.emergencyPhone" placeholder="選填" class="w-full" />
           </UFormField>
-          <div class="flex items-center gap-3">
-            <UCheckbox v-model="addForm.canDriveWheelchairVan" />
-            <label class="text-sm font-medium">具輪椅車操作資格</label>
-          </div>
+          <UFormField label="所屬車行">
+            <USelectMenu v-model="addForm.fleetId" :items="fleetItems" value-key="value" placeholder="獨立司機 (無車行)" class="w-full" />
+          </UFormField>
           <div class="flex justify-end gap-2 pt-2">
             <UButton color="neutral" variant="outline" @click="showAddModal = false">取消</UButton>
             <UButton color="primary" :loading="saving" @click="handleAdd">建立帳號</UButton>
@@ -271,10 +354,9 @@ function formatDate(iso: string | null) {
           <UFormField label="緊急聯絡電話">
             <UInput v-model="editForm.emergencyPhone" placeholder="選填" class="w-full" />
           </UFormField>
-          <div class="flex items-center gap-3">
-            <UCheckbox v-model="editForm.canDriveWheelchairVan" />
-            <label class="text-sm font-medium">具輪椅車操作資格</label>
-          </div>
+          <UFormField label="所屬車行">
+            <USelectMenu v-model="editForm.fleetId" :items="fleetItems" value-key="value" placeholder="獨立司機 (無車行)" class="w-full" />
+          </UFormField>
           <div class="flex justify-end gap-2 pt-2">
             <UButton color="neutral" variant="outline" @click="showEditModal = false">取消</UButton>
             <UButton color="primary" :loading="saving" @click="handleEdit">儲存</UButton>

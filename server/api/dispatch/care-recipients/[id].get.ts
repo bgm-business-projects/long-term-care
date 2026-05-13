@@ -1,5 +1,7 @@
 import { requireAgencyStaff } from '../../../utils/requireAgencyStaff'
 import { getCareRecipientById } from '../../../utils/careRecipientServices'
+import { useDeviceServices } from '../../../utils/assistiveDeviceServices'
+import { useSpecialNeedServices } from '../../../utils/specialNeedServices'
 
 export default defineEventHandler(async (event) => {
   const session = await requireAgencyStaff(event)
@@ -14,7 +16,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Care recipient not found' })
   }
 
-  // agency_staff can only access their own organization's recipients
   const userRole = (session.user as any).role
   const userOrgId = (session.user as any).organizationId
 
@@ -22,5 +23,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  return recipient
+  const { listForRecipient } = useDeviceServices()
+  const devices = await listForRecipient(id)
+  const { listForRecipient: listSpecialNeedsForRecipient } = useSpecialNeedServices()
+  const specialNeedsList = await listSpecialNeedsForRecipient(id)
+  return { ...recipient, devices, specialNeeds: specialNeedsList }
 })

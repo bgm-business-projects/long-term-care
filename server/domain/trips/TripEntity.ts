@@ -9,6 +9,8 @@ export interface TripEntity {
   driverUserId: string | null
   organizationId: string | null
   scheduledAt: Date
+  scheduledEndAt: Date | null
+  estimatedDuration: number | null
   originAddress: string
   originLat: string | null
   originLng: string | null
@@ -20,8 +22,21 @@ export interface TripEntity {
   mileageActual: string | null
   needsWheelchair: boolean
   notes: string | null
+  carpoolGroupId: string | null
+  carpoolOrder: number | null
+  carpoolPickupAt: Date | null
+  carpoolDropoffOrder: number | null
+  carpoolDropoffAt: Date | null
+  pairedTripId: string | null
+  tripDirection: string | null
   createdAt: Date
   updatedAt: Date
+}
+
+export interface RecipientNeedItem {
+  id: string
+  name: string
+  description: string | null
 }
 
 export interface CareRecipientInfo {
@@ -30,7 +45,8 @@ export interface CareRecipientInfo {
   address: string
   contactPerson: string | null
   contactPhone: string | null
-  specialNeeds: SpecialNeeds
+  specialNeeds: RecipientNeedItem[]
+  devices: RecipientNeedItem[]
 }
 
 export interface TripStatusLogEntry {

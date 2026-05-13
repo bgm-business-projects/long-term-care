@@ -29,6 +29,13 @@ const saving = ref(false)
 const addressInput = ref<HTMLInputElement | null>(null)
 let autocomplete: any = null
 
+interface Device { id: string; name: string }
+interface SpecialNeed { id: string; name: string; description: string | null }
+const devices = ref<Device[]>([])
+const specialNeedOptionsList = ref<SpecialNeed[]>([])
+const deviceOptions = computed(() => devices.value.map(d => ({ label: d.name, value: d.id })))
+const specialNeedOptions = computed(() => specialNeedOptionsList.value.map(s => ({ label: s.name, value: s.id })))
+
 const formData = reactive({
   name: '',
   address: '',
@@ -36,27 +43,10 @@ const formData = reactive({
   lng: null as number | null,
   contactPerson: '',
   contactPhone: '',
-  specialNeeds: 'general',
+  specialNeedIds: [] as string[],
+  deviceIds: [] as string[],
   notes: '',
 })
-
-const specialNeedsOptions = [
-  { label: '一般', value: 'general' },
-  { label: '輪椅', value: 'wheelchair' },
-  { label: '臥床', value: 'bedridden' },
-]
-
-const specialNeedsLabel: Record<string, string> = {
-  general: '一般',
-  wheelchair: '輪椅',
-  bedridden: '臥床',
-}
-
-const specialNeedsColor: Record<string, string> = {
-  general: 'neutral',
-  wheelchair: 'warning',
-  bedridden: 'error',
-}
 
 const filteredCases = computed(() => {
   if (!search.value) return cases.value
@@ -202,6 +192,8 @@ const scheduleForm = reactive({
   effectiveEndDate: '',
   notes: '',
   isActive: true,
+  roundTrip: false,
+  returnDepartureTime: '',
 })
 
 async function openSchedules(c: any) {
@@ -230,6 +222,8 @@ function openAddSchedule() {
   scheduleForm.effectiveEndDate = ''
   scheduleForm.notes = ''
   scheduleForm.isActive = true
+  scheduleForm.roundTrip = false
+  scheduleForm.returnDepartureTime = ''
   showScheduleForm.value = true
 }
 
@@ -245,6 +239,8 @@ function openEditSchedule(s: any) {
   scheduleForm.effectiveEndDate = s.effectiveEndDate || ''
   scheduleForm.notes = s.notes || ''
   scheduleForm.isActive = s.isActive !== false
+  scheduleForm.roundTrip = s.roundTrip || false
+  scheduleForm.returnDepartureTime = s.returnDepartureTime || ''
   showScheduleForm.value = true
 }
 
@@ -257,6 +253,13 @@ async function handleSaveSchedule() {
   }
   if (!scheduleForm.originAddress || !scheduleForm.destinationAddress) {
     toast.add({ title: '起點與終點為必填', color: 'error' }); return
+  }
+  if (scheduleForm.roundTrip && !scheduleForm.returnDepartureTime) {
+    toast.add({ title: '勾選來回時請填寫回程出發時間', color: 'error' }); return
+  }
+  if (scheduleForm.roundTrip && scheduleForm.returnDepartureTime
+    && scheduleForm.returnDepartureTime <= scheduleForm.departureTime) {
+    toast.add({ title: '回程出發時間需晚於去程', color: 'error' }); return
   }
   scheduleSaving.value = true
   try {
@@ -305,9 +308,29 @@ function resetForm() {
   formData.lng = null
   formData.contactPerson = ''
   formData.contactPhone = ''
-  formData.specialNeeds = 'general'
+  formData.specialNeedIds = []
+  formData.deviceIds = []
   formData.notes = ''
 }
+
+async function loadDevices() {
+  try {
+    devices.value = await api<Device[]>('/api/dispatch/devices')
+  } catch {
+    devices.value = []
+  }
+}
+async function loadSpecialNeeds() {
+  try {
+    specialNeedOptionsList.value = await api<SpecialNeed[]>('/api/dispatch/special-needs')
+  } catch {
+    specialNeedOptionsList.value = []
+  }
+}
+onMounted(() => {
+  loadDevices()
+  loadSpecialNeeds()
+})
 
 function initAutocomplete() {
   if (!addressInput.value) return
@@ -336,7 +359,7 @@ function openAdd() {
   })
 }
 
-function openEdit(c: any) {
+async function openEdit(c: any) {
   editingItem.value = c
   formData.name = c.name
   formData.address = c.address || ''
@@ -344,9 +367,18 @@ function openEdit(c: any) {
   formData.lng = c.lng != null ? Number(c.lng) : null
   formData.contactPerson = c.contactPerson || ''
   formData.contactPhone = c.contactPhone || ''
-  formData.specialNeeds = c.specialNeeds || 'general'
+  formData.specialNeedIds = []
+  formData.deviceIds = []
   formData.notes = c.notes || ''
   showModal.value = true
+  try {
+    const detail = await api<{ devices?: Device[]; specialNeeds?: SpecialNeed[] }>(`/api/dispatch/care-recipients/${c.id}`)
+    formData.deviceIds = (detail.devices || []).map(d => d.id)
+    formData.specialNeedIds = (detail.specialNeeds || []).map(s => s.id)
+  } catch {
+    formData.deviceIds = []
+    formData.specialNeedIds = []
+  }
   nextTick(() => {
     if (typeof window !== 'undefined' && (window as any).google?.maps?.places) {
       initAutocomplete()
@@ -429,7 +461,6 @@ async function handleDelete() {
           <tr>
             <th class="text-left px-4 py-3 font-medium text-muted">姓名</th>
             <th class="text-left px-4 py-3 font-medium text-muted">機構</th>
-            <th class="text-center px-4 py-3 font-medium text-muted">特殊需求</th>
             <th class="text-left px-4 py-3 font-medium text-muted">地址</th>
             <th class="text-left px-4 py-3 font-medium text-muted">聯絡人</th>
             <th class="text-center px-4 py-3 font-medium text-muted">狀態</th>
@@ -440,11 +471,6 @@ async function handleDelete() {
           <tr v-for="c in filteredCases" :key="c.id" class="hover:bg-muted/20 transition-colors">
             <td class="px-4 py-3 font-medium text-highlighted">{{ c.name }}</td>
             <td class="px-4 py-3 text-muted">{{ orgName || '-' }}</td>
-            <td class="px-4 py-3 text-center">
-              <UBadge :color="specialNeedsColor[c.specialNeeds] || 'neutral'" variant="subtle">
-                {{ specialNeedsLabel[c.specialNeeds] || c.specialNeeds }}
-              </UBadge>
-            </td>
             <td class="px-4 py-3 max-w-xs truncate text-muted">{{ c.address || '-' }}</td>
             <td class="px-4 py-3 text-muted">{{ c.contactPerson || '-' }}</td>
             <td class="px-4 py-3 text-center">
@@ -499,10 +525,26 @@ async function handleDelete() {
             </UFormField>
           </div>
 
-          <UFormField label="特殊需求">
-            <USelect
-              v-model="formData.specialNeeds"
-              :items="specialNeedsOptions"
+          <UFormField label="特殊需求" hint="可多選；至「特殊需求管理」可新增自訂項目">
+            <USelectMenu
+              v-model="formData.specialNeedIds"
+              :items="specialNeedOptions"
+              value-key="value"
+              multiple
+              searchable
+              placeholder="可多選"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField label="常用輔具" hint="新增訂單時會自動帶入，可在訂單頁修改">
+            <USelectMenu
+              v-model="formData.deviceIds"
+              :items="deviceOptions"
+              value-key="value"
+              multiple
+              searchable
+              placeholder="可多選"
               class="w-full"
             />
           </UFormField>
@@ -679,6 +721,19 @@ async function handleDelete() {
             <UFormField label="備註">
               <UTextarea v-model="scheduleForm.notes" placeholder="選填" class="w-full" />
             </UFormField>
+
+            <!-- 來回 -->
+            <div class="border border-default rounded p-3 space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <UCheckbox v-model="scheduleForm.roundTrip" />
+                <span class="text-sm font-medium">需要回程（每次排程都生成回程）</span>
+              </label>
+              <UFormField v-if="scheduleForm.roundTrip" label="回程出發時間 *">
+                <input v-model="scheduleForm.returnDepartureTime" type="time"
+                  class="px-3 py-2 border border-default rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              </UFormField>
+              <p v-if="scheduleForm.roundTrip" class="text-xs text-muted">回程起點為去程終點、終點為去程起點，並會自動與去程互相 link。</p>
+            </div>
 
             <UFormField v-if="editingSchedule" label="狀態">
               <UCheckbox v-model="scheduleForm.isActive" label="啟用此排程" />

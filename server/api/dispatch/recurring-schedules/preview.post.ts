@@ -6,7 +6,8 @@ import { and, gte, lte, isNotNull } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const session = await requireAgencyStaff(event)
-  const orgId = (session.user as any).organizationId as string | null
+  const role = (session.user as any).role as string
+  const sessionOrgId = (session.user as any).organizationId as string | null
 
   const body = await readBody(event)
   const { startDate, endDate } = body
@@ -15,10 +16,25 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'startDate and endDate are required' })
   }
 
+  // admin/developer 可指定 organizationId；agency_staff 強制用自己機構
+  // 'all' = 全部機構, 'none' = 未指定機構, undefined/missing = 預設（admin 視為全部）
+  let filterOrgId: string | null | undefined
+  if (role === 'admin' || role === 'developer') {
+    if (body.organizationId === 'none') filterOrgId = null
+    else if (body.organizationId === 'all' || body.organizationId == null) filterOrgId = undefined
+    else filterOrgId = body.organizationId as string
+  } else {
+    filterOrgId = sessionOrgId
+  }
+
   const db = useDb()
   const { list, expandSchedule } = useRecurringScheduleServices()
 
-  const scheduleList = await list({ organizationId: orgId ?? undefined, activeOnly: true })
+  const scheduleList = await list({
+    organizationId: filterOrgId === null || filterOrgId === undefined ? undefined : filterOrgId,
+    organizationIdIsNull: filterOrgId === null,
+    activeOnly: true,
+  })
 
   // 已存在訂單的 key set
   const rangeStart = new Date(startDate + 'T00:00:00+08:00')
@@ -37,7 +53,6 @@ export default defineEventHandler(async (event) => {
     existingTrips.map(t => `${t.recurringScheduleId}|${new Date(t.scheduledAt!).toISOString().slice(0, 16)}`)
   )
 
-  // 展開所有排程並標記是否已存在
   const occurrences: {
     scheduleId: string
     careRecipientId: string
@@ -48,6 +63,7 @@ export default defineEventHandler(async (event) => {
     needsWheelchair: boolean
     notes: string | null
     exists: boolean
+    isReturn: boolean
   }[] = []
 
   for (const schedule of scheduleList) {
@@ -64,6 +80,7 @@ export default defineEventHandler(async (event) => {
         needsWheelchair: occ.needsWheelchair,
         notes: occ.notes ?? null,
         exists: existingKeys.has(key),
+        isReturn: !!occ.isReturn,
       })
     }
   }

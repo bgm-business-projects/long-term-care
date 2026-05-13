@@ -4,8 +4,9 @@ import { useReportServices } from '../../../utils/reportServices'
 export default defineEventHandler(async (event) => {
   await requireAgencyStaff(event)
   const query = getQuery(event)
-  const { getMileageData } = useReportServices()
-  return getMileageData({
+
+  const { getDriverAttendanceReport } = useReportServices()
+  return getDriverAttendanceReport({
     startDate: String(query.startDate || new Date().toISOString().split('T')[0]),
     endDate: String(query.endDate || new Date().toISOString().split('T')[0]),
     driverUserId: query.driverUserId as string | undefined,

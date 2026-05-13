@@ -12,13 +12,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'vehicleType is required' })
   }
 
+  if (!body.driverUserId) {
+    throw createError({ statusCode: 400, statusMessage: 'driverUserId is required (vehicles must be bound to a driver)' })
+  }
+
   const { create } = useVehicleServices()
   return create({
+    driverUserId: body.driverUserId,
     plate: body.plate,
     vehicleType: body.vehicleType,
     seatCount: body.seatCount,
-    hasWheelchairLift: body.hasWheelchairLift,
     wheelchairCapacity: body.wheelchairCapacity,
+    isAccessible: body.isAccessible ?? body.hasWheelchairLift,
+    isRental: body.isRental,
     notes: body.notes,
   })
 })

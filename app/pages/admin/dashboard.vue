@@ -1,7 +1,8 @@
 <script setup lang="ts">
 const { api } = useApi()
-const today = new Date().toISOString().split('T')[0]
-const selectedDate = ref(today)
+const toast = useToast()
+const today = new Date().toISOString().split('T')[0]!
+const dateRange = ref<{ from: string; to: string }>({ from: today, to: today })
 const data = ref<any>(null)
 const loading = ref(false)
 
@@ -9,24 +10,56 @@ const selectedTrip = ref<any>(null)
 const showTripModal = ref(false)
 const showPendingModal = ref(false)
 const showActiveModal = ref(false)
+const showIncidentsModal = ref(false)
+
+const showResolveModal = ref(false)
+const resolvingIncident = ref<any>(null)
+const resolutionNote = ref('')
+const resolving = ref(false)
+
+const incidentTypeLabel: Record<string, string> = {
+  sick: '🤒 個案生病',
+  missing: '👻 個案失聯',
+  no_show: '🚫 個案未到',
+  accident: '🚗 行車事故',
+  other: '✏️ 其他',
+}
+const incidentTypeColor: Record<string, 'error' | 'warning' | 'info' | 'neutral'> = {
+  sick: 'warning',
+  missing: 'error',
+  no_show: 'warning',
+  accident: 'error',
+  other: 'info',
+}
 
 async function load() {
   loading.value = true
   try {
-    data.value = await api<any>(`/api/dispatch/dashboard?date=${selectedDate.value}`)
+    data.value = await api<any>(`/api/dispatch/dashboard?dateFrom=${dateRange.value.from}&dateTo=${dateRange.value.to}`)
   } finally {
     loading.value = false
   }
 }
 onMounted(load)
-watch(selectedDate, load)
+watch(dateRange, load, { deep: true })
 
 function formatTime(dt: string) {
   return new Date(dt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
 }
 
+function formatDateTime(dt: string) {
+  return new Date(dt).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
 function delayMinutes(scheduledAt: string) {
   return Math.floor((Date.now() - new Date(scheduledAt).getTime()) / 60000)
+}
+
+function estimatedArrival(trip: any): string {
+  if (trip.scheduledEndAt) return formatTime(trip.scheduledEndAt)
+  const dur = trip.estimatedDuration || 60
+  const eta = new Date(new Date(trip.scheduledAt).getTime() + dur * 60000)
+  return eta.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
 }
 
 function openTrip(trip: any) {
@@ -34,24 +67,43 @@ function openTrip(trip: any) {
   showTripModal.value = true
 }
 
-function closeTrip() {
-  showTripModal.value = false
-  selectedTrip.value = null
+function openResolve(incident: any) {
+  resolvingIncident.value = incident
+  resolutionNote.value = ''
+  showResolveModal.value = true
+}
+
+async function submitResolve() {
+  if (!resolvingIncident.value) return
+  resolving.value = true
+  try {
+    await api(`/api/dispatch/incidents/${resolvingIncident.value.id}/resolve`, {
+      method: 'POST',
+      body: { resolutionNote: resolutionNote.value.trim() || null },
+    })
+    toast.add({ title: '已標記處理完成', color: 'success' })
+    showResolveModal.value = false
+    await load()
+  } catch (err: any) {
+    toast.add({ title: err?.data?.statusMessage || '操作失敗', color: 'error' })
+  } finally {
+    resolving.value = false
+  }
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-3">
       <h1 class="text-2xl font-bold">營運總覽</h1>
-      <input type="date" v-model="selectedDate" class="border border-default rounded px-3 py-1.5 text-sm" />
+      <DateRangePicker v-model="dateRange" />
     </div>
 
     <!-- 統計卡片 -->
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-4 gap-4">
       <div class="border border-default rounded-xl p-4">
-        <p class="text-sm text-muted">今日訂單總數</p>
-        <p class="text-3xl font-bold mt-1">{{ data?.todayTripCount ?? '—' }}</p>
+        <p class="text-sm text-muted">區間訂單總數</p>
+        <p class="text-3xl font-bold mt-1">{{ data?.totalTripCount ?? '—' }}</p>
       </div>
       <div
         class="border border-warning/50 bg-warning/5 rounded-xl p-4 cursor-pointer hover:bg-warning/10 transition-colors"
@@ -68,16 +120,104 @@ function closeTrip() {
         @click="showActiveModal = true"
       >
         <p class="text-sm text-muted flex items-center gap-1">
-          執行中車輛
+          進行中任務
           <UIcon name="i-lucide-chevron-right" class="text-xs" />
         </p>
-        <p class="text-3xl font-bold text-success mt-1">{{ data?.activeVehicleCount ?? '—' }}</p>
+        <p class="text-3xl font-bold text-success mt-1">{{ data?.activeTripCount ?? '—' }}</p>
+      </div>
+      <div
+        class="border border-error/50 bg-error/5 rounded-xl p-4 cursor-pointer hover:bg-error/10 transition-colors"
+        @click="showIncidentsModal = true"
+      >
+        <p class="text-sm text-muted flex items-center gap-1">
+          異常回報（未處理 / 全部）
+          <UIcon name="i-lucide-chevron-right" class="text-xs" />
+        </p>
+        <p class="text-3xl font-bold text-error mt-1">
+          {{ data?.unresolvedIncidentCount ?? '—' }}
+          <span class="text-base text-muted">/ {{ data?.incidents?.length ?? '—' }}</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- 進行中任務（卡片列表） -->
+    <div v-if="data?.activeTrips?.length" class="border border-default rounded-xl overflow-hidden">
+      <div class="px-4 py-3 bg-success/10 border-b border-default flex items-center gap-2">
+        <UIcon name="i-lucide-truck" class="text-success" />
+        <h3 class="font-semibold">進行中任務（{{ data.activeTrips.length }}）</h3>
+      </div>
+      <div class="divide-y divide-default">
+        <div
+          v-for="trip in data.activeTrips"
+          :key="trip.id"
+          class="p-4 grid grid-cols-12 gap-3 text-sm hover:bg-muted/20 cursor-pointer"
+          @click="openTrip(trip)"
+        >
+          <div class="col-span-2">
+            <p class="text-xs text-muted">出發 → 預計抵達</p>
+            <p class="font-mono">
+              {{ formatTime(trip.scheduledAt) }}
+              <span class="text-muted">→</span>
+              <span class="text-success font-semibold">{{ estimatedArrival(trip) }}</span>
+            </p>
+          </div>
+          <div class="col-span-3">
+            <p class="text-xs text-muted">個案 / 機構</p>
+            <p class="font-medium truncate">{{ trip.careRecipientName || '—' }}</p>
+            <p v-if="trip.organizationName" class="text-xs text-muted truncate">{{ trip.organizationName }}</p>
+          </div>
+          <div class="col-span-3">
+            <p class="text-xs text-muted">司機 / 車輛</p>
+            <p class="truncate">{{ trip.driverName || '—' }}</p>
+            <p v-if="trip.vehiclePlate" class="text-xs text-muted font-mono">{{ trip.vehiclePlate }}</p>
+          </div>
+          <div class="col-span-4">
+            <p class="text-xs text-muted">目的地</p>
+            <p class="truncate">{{ trip.destinationAddress || '—' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 異常回報區塊 -->
+    <div v-if="data?.incidents?.length" class="border border-default rounded-xl overflow-hidden">
+      <div class="px-4 py-3 bg-error/10 border-b border-default flex items-center gap-2">
+        <UIcon name="i-lucide-alert-octagon" class="text-error" />
+        <h3 class="font-semibold">異常回報（{{ data.unresolvedIncidentCount }} 筆未處理 / {{ data.incidents.length }} 筆全部）</h3>
+      </div>
+      <div class="divide-y divide-default">
+        <div
+          v-for="i in data.incidents.slice(0, 6)"
+          :key="i.id"
+          class="p-4 flex items-start gap-3 text-sm"
+          :class="i.resolved ? 'opacity-60' : ''"
+        >
+          <UBadge :color="incidentTypeColor[i.type] || 'neutral'" variant="subtle" size="md" class="shrink-0">
+            {{ incidentTypeLabel[i.type] || i.type }}
+          </UBadge>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium">
+              {{ i.careRecipientName || '—' }}
+              <span class="text-muted text-xs">/ 司機 {{ i.driverName || '—' }}</span>
+            </p>
+            <p v-if="i.description" class="text-xs text-muted mt-0.5 whitespace-pre-line">{{ i.description }}</p>
+            <p class="text-xs text-muted mt-0.5">回報時間：{{ formatDateTime(i.reportedAt) }}</p>
+          </div>
+          <UButton
+            v-if="!i.resolved"
+            size="xs"
+            color="primary"
+            variant="outline"
+            icon="i-lucide-check"
+            @click="openResolve(i)"
+          >處理</UButton>
+          <UBadge v-else color="success" variant="subtle" size="xs">已處理</UBadge>
+        </div>
       </div>
     </div>
 
     <!-- 告警區塊 -->
     <div class="space-y-4">
-      <!-- 延遲出發告警 -->
       <div v-if="data?.alerts?.delayedDepartures?.length" class="border border-error/50 bg-error/5 rounded-xl p-4">
         <h3 class="font-semibold text-error flex items-center gap-2">
           <UIcon name="i-lucide-alert-triangle" />
@@ -101,7 +241,6 @@ function closeTrip() {
         </ul>
       </div>
 
-      <!-- 駕照到期告警 -->
       <div v-if="data?.alerts?.licenseExpiringSoon?.length" class="border border-warning/50 bg-warning/5 rounded-xl p-4">
         <h3 class="font-semibold text-warning flex items-center gap-2">
           <UIcon name="i-lucide-id-card" />
@@ -113,79 +252,20 @@ function closeTrip() {
           </li>
         </ul>
       </div>
-
-      <div v-if="!data?.alerts?.delayedDepartures?.length && !data?.alerts?.licenseExpiringSoon?.length && data"
-           class="text-center text-muted text-sm py-4">
-        ✓ 目前無異常告警
-      </div>
     </div>
 
-    <!-- 延遲訂單詳情 Modal -->
+    <!-- 訂單詳情 Modal -->
     <UModal v-model:open="showTripModal" title="訂單詳情" description=" ">
       <template #content>
-        <div v-if="selectedTrip" class="p-6 space-y-4">
-          <div class="flex items-center gap-2">
-            <UBadge color="error" variant="subtle">延遲未出發</UBadge>
-            <span class="text-sm text-muted">遲 {{ delayMinutes(selectedTrip.scheduledAt) }} 分鐘</span>
-          </div>
-          <div class="space-y-4 text-sm">
-            <div>
-              <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">行程資訊</p>
-              <div class="space-y-2">
-                <div class="flex gap-3">
-                  <span class="text-muted w-20 shrink-0">個案</span>
-                  <span class="font-medium">{{ selectedTrip.careRecipientName || '—' }}</span>
-                </div>
-                <div class="flex gap-3">
-                  <span class="text-muted w-20 shrink-0">預定時間</span>
-                  <span>{{ new Date(selectedTrip.scheduledAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</span>
-                </div>
-                <div class="flex gap-3">
-                  <span class="text-muted w-20 shrink-0">上車地點</span>
-                  <span>{{ selectedTrip.originAddress || '—' }}</span>
-                </div>
-                <div class="flex gap-3">
-                  <span class="text-muted w-20 shrink-0">目的地</span>
-                  <span>{{ selectedTrip.destinationAddress || '—' }}</span>
-                </div>
-              </div>
-            </div>
-            <USeparator />
-            <div>
-              <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">司機</p>
-              <div class="space-y-2">
-                <div class="flex gap-3">
-                  <span class="text-muted w-20 shrink-0">姓名</span>
-                  <span class="font-medium">{{ selectedTrip.driverName || '—' }}</span>
-                </div>
-                <div class="flex gap-3 items-center">
-                  <span class="text-muted w-20 shrink-0">聯絡電話</span>
-                  <a v-if="selectedTrip.driverPhone" :href="`tel:${selectedTrip.driverPhone}`"
-                     class="text-primary font-medium flex items-center gap-1 hover:underline">
-                    <UIcon name="i-lucide-phone" class="text-xs" />
-                    {{ selectedTrip.driverPhone }}
-                  </a>
-                  <span v-else>—</span>
-                </div>
-              </div>
-            </div>
-            <USeparator />
-            <div>
-              <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">車輛</p>
-              <div class="space-y-2">
-                <div class="flex gap-3">
-                  <span class="text-muted w-20 shrink-0">車牌</span>
-                  <span class="font-medium font-mono">{{ selectedTrip.vehiclePlate || '—' }}</span>
-                </div>
-                <div class="flex gap-3">
-                  <span class="text-muted w-20 shrink-0">車種</span>
-                  <span>{{ selectedTrip.vehicleType || '—' }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div v-if="selectedTrip" class="p-6 space-y-3 text-sm">
+          <div><span class="text-muted">個案：</span>{{ selectedTrip.careRecipientName || '—' }}</div>
+          <div><span class="text-muted">時間：</span>{{ formatDateTime(selectedTrip.scheduledAt) }}</div>
+          <div><span class="text-muted">起點：</span>{{ selectedTrip.originAddress || '—' }}</div>
+          <div><span class="text-muted">終點：</span>{{ selectedTrip.destinationAddress || '—' }}</div>
+          <div><span class="text-muted">司機：</span>{{ selectedTrip.driverName || '—' }}</div>
+          <div><span class="text-muted">車牌：</span>{{ selectedTrip.vehiclePlate || '—' }}</div>
           <div class="flex justify-end pt-2">
-            <UButton color="neutral" variant="outline" @click="closeTrip">關閉</UButton>
+            <UButton color="neutral" variant="outline" @click="showTripModal = false">關閉</UButton>
           </div>
         </div>
       </template>
@@ -195,9 +275,7 @@ function closeTrip() {
     <UModal v-model:open="showPendingModal" title="待派訂單" description=" ">
       <template #content>
         <div class="p-6 space-y-3">
-          <div v-if="!data?.pendingTrips?.length" class="text-center text-muted text-sm py-4">
-            目前無待派訂單
-          </div>
+          <div v-if="!data?.pendingTrips?.length" class="text-center text-muted text-sm py-4">目前無待派訂單</div>
           <div
             v-for="trip in data?.pendingTrips"
             :key="trip.id"
@@ -205,25 +283,9 @@ function closeTrip() {
           >
             <div class="flex items-center justify-between">
               <span class="font-medium">{{ trip.careRecipientName || '—' }}</span>
-              <div class="flex items-center gap-1.5">
-                <UIcon v-if="trip.needsWheelchair" name="i-lucide-accessibility" class="text-warning text-xs" />
-                <span class="text-muted text-xs">{{ formatTime(trip.scheduledAt) }}</span>
-              </div>
+              <span class="text-muted text-xs">{{ formatTime(trip.scheduledAt) }}</span>
             </div>
-            <div class="text-muted text-xs flex items-start gap-1">
-              <UIcon name="i-lucide-map-pin" class="shrink-0 mt-0.5" />
-              {{ trip.originAddress }}
-            </div>
-            <div class="text-muted text-xs flex items-start gap-1">
-              <UIcon name="i-lucide-flag" class="shrink-0 mt-0.5" />
-              {{ trip.destinationAddress }}
-            </div>
-            <div v-if="trip.careRecipientPhone" class="text-xs">
-              <a :href="`tel:${trip.careRecipientPhone}`" class="text-primary flex items-center gap-1 hover:underline">
-                <UIcon name="i-lucide-phone" class="text-xs" />
-                {{ trip.careRecipientPhone }}
-              </a>
-            </div>
+            <div class="text-muted text-xs">{{ trip.originAddress }} → {{ trip.destinationAddress }}</div>
           </div>
           <div class="flex justify-end pt-2">
             <UButton color="neutral" variant="outline" @click="showPendingModal = false">關閉</UButton>
@@ -232,40 +294,83 @@ function closeTrip() {
       </template>
     </UModal>
 
-    <!-- 執行中車輛 Modal -->
-    <UModal v-model:open="showActiveModal" title="執行中車輛" description=" ">
+    <!-- 進行中 Modal -->
+    <UModal v-model:open="showActiveModal" title="進行中任務" description=" ">
       <template #content>
         <div class="p-6 space-y-3">
-          <div v-if="!data?.activeVehicleTrips?.length" class="text-center text-muted text-sm py-4">
-            目前無執行中車輛
-          </div>
+          <div v-if="!data?.activeTrips?.length" class="text-center text-muted text-sm py-4">目前無進行中任務</div>
           <div
-            v-for="trip in data?.activeVehicleTrips"
+            v-for="trip in data?.activeTrips"
             :key="trip.id"
             class="border border-default rounded-lg p-3 space-y-2 text-sm"
           >
             <div class="flex items-center justify-between">
-              <span class="font-medium font-mono">{{ trip.vehiclePlate || '—' }}</span>
-              <span class="text-muted text-xs">{{ trip.vehicleType }}</span>
+              <span class="font-medium">{{ trip.careRecipientName || '—' }}</span>
+              <span class="text-success font-semibold text-xs">預計 {{ estimatedArrival(trip) }}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-user" class="text-muted text-xs shrink-0" />
-              <span>{{ trip.driverName || '—' }}</span>
-              <a v-if="trip.driverPhone" :href="`tel:${trip.driverPhone}`"
-                 class="text-primary flex items-center gap-1 hover:underline ml-auto text-xs">
-                <UIcon name="i-lucide-phone" class="text-xs" />
-                {{ trip.driverPhone }}
-              </a>
-            </div>
-            <div class="text-muted text-xs border-t border-default pt-2 flex items-center gap-2">
-              <UIcon name="i-lucide-heart-handshake" class="shrink-0" />
-              <span>{{ trip.careRecipientName || '—' }}</span>
-              <span class="mx-1">→</span>
-              <span class="truncate">{{ trip.destinationAddress }}</span>
-            </div>
+            <p class="text-xs text-muted truncate">→ {{ trip.destinationAddress }}</p>
+            <p class="text-xs text-muted">司機：{{ trip.driverName || '—' }} {{ trip.vehiclePlate || '' }}</p>
           </div>
           <div class="flex justify-end pt-2">
             <UButton color="neutral" variant="outline" @click="showActiveModal = false">關閉</UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- 異常回報全部列表 Modal -->
+    <UModal v-model:open="showIncidentsModal" title="異常回報" description=" " size="lg">
+      <template #content>
+        <div class="p-6 space-y-3 max-h-[80vh] overflow-y-auto">
+          <div v-if="!data?.incidents?.length" class="text-center text-muted text-sm py-4">區間內無異常回報</div>
+          <div
+            v-for="i in data?.incidents"
+            :key="i.id"
+            class="border border-default rounded-lg p-3 space-y-1 text-sm"
+            :class="i.resolved ? 'opacity-60' : ''"
+          >
+            <div class="flex items-center gap-2">
+              <UBadge :color="incidentTypeColor[i.type] || 'neutral'" variant="subtle" size="xs">
+                {{ incidentTypeLabel[i.type] || i.type }}
+              </UBadge>
+              <span class="font-medium text-xs">{{ i.careRecipientName || '—' }}</span>
+              <UBadge v-if="i.resolved" color="success" variant="subtle" size="xs">已處理</UBadge>
+              <UButton
+                v-else
+                size="xs"
+                color="primary"
+                variant="outline"
+                icon="i-lucide-check"
+                class="ml-auto"
+                @click="openResolve(i)"
+              >處理</UButton>
+            </div>
+            <p v-if="i.description" class="text-xs whitespace-pre-line">{{ i.description }}</p>
+            <p class="text-xs text-muted">司機：{{ i.driverName || '—' }} · 回報於 {{ formatDateTime(i.reportedAt) }}</p>
+          </div>
+          <div class="flex justify-end pt-2">
+            <UButton color="neutral" variant="outline" @click="showIncidentsModal = false">關閉</UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- 處理 incident Modal -->
+    <UModal v-model:open="showResolveModal" title="標記處理完成" description=" ">
+      <template #content>
+        <div class="p-6 space-y-4">
+          <p class="text-sm">
+            <UBadge :color="incidentTypeColor[resolvingIncident?.type] || 'neutral'" variant="subtle" size="xs">
+              {{ incidentTypeLabel[resolvingIncident?.type] || resolvingIncident?.type }}
+            </UBadge>
+            <span class="ml-2 text-muted">{{ resolvingIncident?.careRecipientName || '—' }}</span>
+          </p>
+          <UFormField label="處理說明（選填）">
+            <UTextarea v-model="resolutionNote" :rows="3" placeholder="例：已聯絡個案家屬處理、已協調改派時段" class="w-full" />
+          </UFormField>
+          <div class="flex justify-end gap-2">
+            <UButton color="neutral" variant="ghost" @click="showResolveModal = false">取消</UButton>
+            <UButton color="primary" :loading="resolving" @click="submitResolve">確認處理</UButton>
           </div>
         </div>
       </template>

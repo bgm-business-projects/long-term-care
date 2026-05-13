@@ -13,6 +13,11 @@ async function handleSubmit() {
   try {
     await signInWithEmail(form.email, form.password)
     const role = (user.value as any)?.role ?? ''
+    // role='user' = 已註冊但還沒送出司機申請，導去 onboarding
+    if (role === 'user') {
+      navigateTo('/driver/onboarding')
+      return
+    }
     if (role !== 'driver') {
       await signOut()
       error.value = '您沒有此後台的存取權限，請聯絡管理員'
@@ -82,6 +87,12 @@ async function handleSubmit() {
           </form>
         </div>
       </UCard>
+
+      <div class="text-center">
+        <NuxtLink to="/driver/register" class="text-sm text-primary hover:underline">
+          還沒有帳號？立即註冊
+        </NuxtLink>
+      </div>
 
       <div class="flex justify-center gap-4 text-xs text-muted">
         <NuxtLink to="/admin/login" class="text-primary hover:underline">管理員登入</NuxtLink>

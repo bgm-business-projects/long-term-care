@@ -19,10 +19,13 @@ const navGroups = [
   {
     label: '基礎資料',
     items: [
-      { label: '車輛管理', icon: 'i-lucide-car', to: '/admin/vehicles' },
+      { label: '車行管理', icon: 'i-lucide-warehouse', to: '/admin/fleets' },
       { label: '司機管理', icon: 'i-lucide-user-check', to: '/admin/drivers' },
-      { label: '服務據點', icon: 'i-lucide-map-pin', to: '/admin/locations' },
       { label: '機構管理', icon: 'i-lucide-building-2', to: '/admin/organizations' },
+      { label: '個案管理', icon: 'i-lucide-heart-handshake', to: '/admin/cases' },
+      { label: '服務據點', icon: 'i-lucide-map-pin', to: '/admin/locations' },
+      { label: '輔具管理', icon: 'i-lucide-accessibility', to: '/admin/devices' },
+      { label: '特殊需求管理', icon: 'i-lucide-clipboard-list', to: '/admin/special-needs' },
     ],
   },
   {

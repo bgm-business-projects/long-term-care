@@ -1,5 +1,7 @@
 import { requireAgencyStaff } from '../../../utils/requireAgencyStaff'
 import { createCareRecipient } from '../../../utils/careRecipientServices'
+import { useDeviceServices } from '../../../utils/assistiveDeviceServices'
+import { useSpecialNeedServices } from '../../../utils/specialNeedServices'
 
 export default defineEventHandler(async (event) => {
   const session = await requireAgencyStaff(event)
@@ -24,9 +26,17 @@ export default defineEventHandler(async (event) => {
     lng: body.lng,
     contactPerson: body.contactPerson,
     contactPhone: body.contactPhone,
-    specialNeeds: body.specialNeeds,
     notes: body.notes,
   })
+
+  if (recipient && Array.isArray(body.deviceIds) && body.deviceIds.length > 0) {
+    const { setRecipientDevices } = useDeviceServices()
+    await setRecipientDevices(recipient.id, body.deviceIds)
+  }
+  if (recipient && Array.isArray(body.specialNeedIds) && body.specialNeedIds.length > 0) {
+    const { setRecipientSpecialNeeds } = useSpecialNeedServices()
+    await setRecipientSpecialNeeds(recipient.id, body.specialNeedIds)
+  }
 
   setResponseStatus(event, 201)
   return recipient

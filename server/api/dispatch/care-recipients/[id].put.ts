@@ -1,5 +1,7 @@
 import { requireAgencyStaff } from '../../../utils/requireAgencyStaff'
 import { getCareRecipientById, updateCareRecipient } from '../../../utils/careRecipientServices'
+import { useDeviceServices } from '../../../utils/assistiveDeviceServices'
+import { useSpecialNeedServices } from '../../../utils/specialNeedServices'
 
 export default defineEventHandler(async (event) => {
   const session = await requireAgencyStaff(event)
@@ -30,13 +32,24 @@ export default defineEventHandler(async (event) => {
     lng: body.lng,
     contactPerson: body.contactPerson,
     contactPhone: body.contactPhone,
-    specialNeeds: body.specialNeeds,
     notes: body.notes,
     isActive: body.isActive,
   })
 
   if (!recipient) {
     throw createError({ statusCode: 404, statusMessage: 'Care recipient not found' })
+  }
+
+  // 更新個案常用輔具
+  if (Array.isArray(body.deviceIds)) {
+    const { setRecipientDevices } = useDeviceServices()
+    await setRecipientDevices(id, body.deviceIds)
+  }
+
+  // 更新個案特殊需求
+  if (Array.isArray(body.specialNeedIds)) {
+    const { setRecipientSpecialNeeds } = useSpecialNeedServices()
+    await setRecipientSpecialNeeds(id, body.specialNeedIds)
   }
 
   return recipient

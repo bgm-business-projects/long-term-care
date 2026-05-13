@@ -1,5 +1,6 @@
 <script setup lang="ts">
-const props = defineProps<{ cellMinutes: number; totalCells: number }>()
+const props = defineProps<{ cellMinutes: number; totalCells: number; cellMinWidth?: number }>()
+const cellWidthPx = computed(() => props.cellMinWidth ?? 32)
 
 const GANTT_START = 6 * 60
 
@@ -18,9 +19,9 @@ const cells = computed(() => {
 <template>
   <div
     class="grid border-b border-default bg-default/50 sticky top-0 z-10"
-    :style="`grid-template-columns: 120px repeat(${totalCells}, minmax(28px, 1fr))`"
+    :style="`grid-template-columns: 160px repeat(${totalCells}, ${cellWidthPx}px)`"
   >
-    <div class="px-2 py-1.5 text-xs font-medium text-muted sticky left-0 bg-white dark:bg-gray-900 border-r border-default">車輛</div>
+    <div class="px-2 py-1.5 text-xs font-medium text-muted sticky left-0 bg-white dark:bg-gray-900 border-r border-default">司機 / 車輛</div>
     <div
       v-for="cell in cells"
       :key="cell.i"

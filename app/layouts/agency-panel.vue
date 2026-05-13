@@ -35,6 +35,8 @@ const navGroups = [
       { label: '訂單列表', icon: 'i-lucide-list', to: '/agency/orders' },
       { label: '個案管理', icon: 'i-lucide-heart-handshake', to: '/agency/cases' },
       { label: '據點管理', icon: 'i-lucide-map-pin', to: '/agency/locations' },
+      { label: '輔具管理', icon: 'i-lucide-accessibility', to: '/agency/devices' },
+      { label: '特殊需求管理', icon: 'i-lucide-clipboard-list', to: '/agency/special-needs' },
     ],
   },
   {

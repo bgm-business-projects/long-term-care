@@ -13,13 +13,13 @@ export default defineEventHandler(async (event) => {
 
   const driver = await updateDriver(id, {
     phone: body.phone,
+    fleetId: body.fleetId,
     licenseExpiry: body.licenseExpiry,
     isActive: body.isActive,
     status: body.status,
     unavailableDates: body.unavailableDates,
     emergencyContact: body.emergencyContact,
     emergencyPhone: body.emergencyPhone,
-    canDriveWheelchairVan: body.canDriveWheelchairVan,
   })
 
   if (!driver) {

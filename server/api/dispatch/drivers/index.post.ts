@@ -14,10 +14,10 @@ export default defineEventHandler(async (event) => {
     name: body.name,
     email: body.email,
     phone: body.phone,
+    fleetId: body.fleetId ?? null,
     licenseExpiry: body.licenseExpiry,
     emergencyContact: body.emergencyContact,
     emergencyPhone: body.emergencyPhone,
-    canDriveWheelchairVan: body.canDriveWheelchairVan,
   })
 
   setResponseStatus(event, 201)

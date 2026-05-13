@@ -1,8 +1,8 @@
-import { requireAdmin } from '../../utils/requireAdmin'
+import { requireAgencyStaff } from '../../utils/requireAgencyStaff'
 import { getGoogleMapsKey } from '../../utils/getGoogleMapsKey'
 
 export default defineEventHandler(async (event) => {
-  await requireAdmin(event)
+  await requireAgencyStaff(event)
   const { origin, destination, waypoints } = getQuery(event)
 
   if (!origin || !destination) {
