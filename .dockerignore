@@ -1,0 +1,38 @@
+# Build artifacts
+.output
+.nuxt
+.nitro
+node_modules
+dist
+
+# Dev / OS
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test / coverage
+coverage
+*.test.ts
+__tests__
+
+# Docs / misc
+README.md
+docs
+.github
+
+# Local docker
+docker-compose.yml
+docker-compose.override.yml

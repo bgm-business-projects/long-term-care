@@ -28,6 +28,7 @@ doc/
 .env
 .env.*
 !.env.example
+!.env.dokploy.example
 
 # Claude Code local settings
 .claude/settings.local.json
